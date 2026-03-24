@@ -1,47 +1,123 @@
-# registro-di-laboratorio-5BIA
+# 🔬 Registrony del Laboratoriony
 
-Mia nonna, quando è morta, non mi ha lasciato niente
-Mio nonno è esploso in guerra, non mi ha lasciato il Rolex
-Ma tu, bro, sei diversa, la mia rivoluzione
-Non vado a lavorare, tuo padre è senatore
-Resterà di me solo una macchia sui vestiti di Chanel
-Ma non mi chiedere di mettere De André
-Voglio farti male e poi scoppiare da Don Raffaè
-Comprami i buchi del culo
-Per te laverei i piatti, mi scopo una Dyson
-Sarei con una ricca anche se fossi gay
-Resterò su di te
-Come uno schizzo disegnato da Monet
-Ho il cazzo duro, scoppia come Chardonnay
-Voglio stapparlo con te stanotte, eh, eh
-Resterò su di te
-Come uno schizzo disegnato da Monet
-Non te la do se non mi intesti uno chalet
-Vengo a manifestare, sì, a favore delle donne ricche
-Vuoi fare il mantenuto?
-Forniamo figlie di avvocati, notai, primari, imprenditori
-More, ricce, bionde, belle, brutte, soprattutto brutte
-E per i più impavidi forniamo anche le over settanta
-Voglio i tuoi soldi, mica la tua anima
-Ridammi indietro i fiori, compriamo il bangladino
-Ho il cazzo-grattacielo, non c'ho più l'orgoglio
-Tre metri sopra il pelo quando apri il portafoglio
-Voglio i tuoi soldi, mica la tua anima
-Ridammi indietro i fiori, compriamo il bangladino, baby
-Ho il cazzo-grattacielo, non c'ho più l'orgoglio
-Tre metri sopra il pelo se tu apri il portafoglio
-Resterò su di te
-Come uno schizzo disegnato da Monet
-Ho il cazzo duro, scoppia come Chardonnay
-Voglio stapparlo con te stanotte, eh, eh
-Resterà di me solo una macchia sui vestiti di Chanel
-Ma non mi chiedere di mettere De André
-Voglio farti male e poi scoppiare da Don Raffaè
-Resterò su di te
-Come uno schizzo disegnato da Monet
-Ho il cazzo duro, scoppia come Chardonnay
-Voglio stapparlo con te stanotte, eh, eh
-Resterò su di te
-Come uno schizzo disegnato da Monet
-Non te la do se non mi intesti uno chalet
-Vengo a manifestare, sì, a favore delle donne ricche
+> Sistema di gestione dei laboratori scolastici — ITT G. Ferraris, Francavilla Fontana
+
+---
+
+## 📋 Cos'è
+
+**Registrony del Laboratoriony** è un'applicazione web PHP/MySQL per la gestione dei laboratori di un istituto tecnico. Permette di registrare le sessioni di laboratorio, tracciare l'utilizzo dei materiali, raccogliere le firme dei docenti e gestire segnalazioni di problemi alle attrezzature.
+
+---
+
+## ✨ Funzionalità principali
+
+- **Dashboard** — panoramica delle sessioni odierne, segnalazioni aperte e materiali in esaurimento
+- **Sessioni di laboratorio** — registrazione con ora ingresso/uscita, classe, attività svolta e firme docenti (titolare + compresenza)
+- **Materiali** — inventario per laboratorio con soglie minime e alert di esaurimento
+- **Segnalazioni** — sistema di ticketing con priorità (bassa / media / alta / urgente) e stati (aperta / in lavorazione / risolta / chiusa)
+- **Pannello Admin** — gestione di utenti, laboratori, classi e materiali
+
+---
+
+## 🛠️ Stack tecnologico
+
+| Layer | Tecnologia |
+|-------|-----------|
+| Backend | PHP 8+ |
+| Database | MySQL 8 (via PDO) |
+| Frontend | HTML5, CSS3, JavaScript vanilla |
+| Server locale | XAMPP / WAMP |
+
+---
+
+## 🚀 Installazione
+
+### Prerequisiti
+- XAMPP (o equivalente) con PHP 8+ e MySQL 8
+- Browser moderno
+
+### Setup
+
+1. **Clona la repo** nella cartella `htdocs` di XAMPP:
+   ```bash
+   git clone <url-repo> htdocs/registrony
+   ```
+
+2. **Avvia** Apache e MySQL da XAMPP Control Panel.
+
+3. **Crea il database** eseguendo lo script SQL:
+   - Apri [phpMyAdmin](http://localhost/phpmyadmin)
+   - Importa il file `registrony.sql`
+
+   *In alternativa, da terminale:*
+   ```bash
+   mysql -u root -p < registrony.sql
+   ```
+
+4. **Configura la connessione** in `config/database.php` se necessario (di default usa `root` senza password).
+
+5. **Accedi** su [http://localhost/registrony](http://localhost/registrony)
+
+---
+
+## 📁 Struttura del progetto
+
+```
+registrony/
+├── assets/
+│   ├── css/style.css       # Stili globali
+│   ├── js/app.js           # JavaScript (sidebar, modal, ecc.)
+│   └── img/
+├── config/
+│   ├── app.php             # Configurazione base (BASE_PATH)
+│   ├── auth.php            # Autenticazione e sessioni
+│   └── database.php        # Connessione PDO MySQL
+├── includes/
+│   ├── header.php          # Layout header + sidebar
+│   └── footer.php          # Layout footer
+├── pages/
+│   ├── admin/
+│   │   ├── classi.php
+│   │   ├── laboratori.php
+│   │   ├── materiali.php
+│   │   └── utenti.php
+│   ├── materiali/
+│   │   └── utilizzo.php
+│   ├── segnalazioni/
+│   │   ├── index.php
+│   │   ├── nuova.php
+│   │   └── dettaglio.php
+│   └── sessioni/
+│       ├── index.php
+│       ├── nuova.php
+│       └── dettaglio.php
+├── index.php               # Dashboard
+├── login.php
+├── logout.php
+├── registrony.sql          # Schema + dati iniziali
+└── setup.php               # Script di setup alternativo
+```
+
+---
+
+## 👥 Collaboratori
+
+| Nome | Ruolo |
+|------|-------|
+| **Francesco Moretto** | Creator |
+| **Daniele Signorile** | Sviluppatore |
+| **Patrick Colucci** | Sviluppatore |
+
+---
+
+## 📌 Note di sviluppo
+
+- Il `BASE_PATH` viene rilevato automaticamente dal percorso della cartella — la repo funziona con qualsiasi nome di directory sotto `htdocs/`
+- Il pannello Admin è visibile solo agli utenti con ruolo `admin`
+- Il trigger MySQL `trg_firme_max_due_insert` limita a 2 le firme per sessione
+- Il trigger `trg_aggiorna_quantita_materiale` aggiorna automaticamente la giacenza dopo ogni utilizzo
+
+---
+
+*Progetto scolastico — ITT Enrico Fermi, Francavilla Fontana — A.S. 2025/2026*
