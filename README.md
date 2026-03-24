@@ -1,6 +1,6 @@
 # 🔬 Registrony del Laboratoriony
 
-> Sistema di gestione dei laboratori scolastici — ITT G. Ferraris, Francavilla Fontana
+> Sistema di gestione dei laboratori scolastici — ITT Enrico Fermi, Francavilla Fontana
 
 ---
 
