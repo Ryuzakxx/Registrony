@@ -15,14 +15,14 @@ require_once __DIR__ . '/database.php';
 function login(string $email, string $password): bool {
     $pdo = getConnection();
     
-    // Query corretta: assicurati che 'pwd' sia il nome esatto nel DB
-    $sql = "SELECT id, nome, cognome, email, pwd, ruolo, attivo FROM utenti WHERE email = ?";
+    
+    $sql = "SELECT id, nome, cognome, email, password, ruolo, attivo FROM utenti WHERE email = ?";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
     // Controllo password in chiaro (visto che abbiamo tolto l'hashing)
-    if ($user && $user['attivo'] && $password === $user['pwd']) {
+    if ($user && $user['attivo'] && $password === $user['password']) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_nome'] = $user['nome'];
         $_SESSION['user_cognome'] = $user['cognome'];
