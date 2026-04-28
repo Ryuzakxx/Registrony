@@ -1,6 +1,6 @@
 <?php
 /**
- * Sistema di autenticazione
+ * Sistema di autenticazione - MySQLi procedurale
  */
 
 session_start();
@@ -8,34 +8,25 @@ session_start();
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/database.php';
 
-
-/**
- * Verifica login utente
- */
 function login(string $email, string $password): bool {
-    $pdo = getConnection();
-    
-    
-    $sql = "SELECT id, nome, cognome, email, password, ruolo, attivo FROM utenti WHERE email = ?";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
+    $conn = getConnection();
 
-    // Controllo password in chiaro (visto che abbiamo tolto l'hashing)
+    $email = mysqli_real_escape_string($conn, $email);
+    $result = mysqli_query($conn, "SELECT id, nome, cognome, email, password, ruolo, attivo FROM utenti WHERE email = '$email'");
+    $user = mysqli_fetch_assoc($result);
+
     if ($user && $user['attivo'] && $password === $user['password']) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['user_nome'] = $user['nome'];
-        $_SESSION['user_cognome'] = $user['cognome'];
-        $_SESSION['user_email'] = $user['email'];
-        $_SESSION['user_ruolo'] = $user['ruolo'];
-        $_SESSION['user_nome_completo'] = $user['cognome'] . ' ' . $user['nome'];
+        $_SESSION['user_id']           = $user['id'];
+        $_SESSION['user_nome']         = $user['nome'];
+        $_SESSION['user_cognome']      = $user['cognome'];
+        $_SESSION['user_email']        = $user['email'];
+        $_SESSION['user_ruolo']        = $user['ruolo'];
+        $_SESSION['user_nome_completo']= $user['cognome'] . ' ' . $user['nome'];
         return true;
     }
     return false;
 }
-/**
- * Logout utente
- */
+
 function logout(): void {
     session_unset();
     session_destroy();
@@ -43,23 +34,14 @@ function logout(): void {
     exit;
 }
 
-/**
- * Verifica se l'utente e' loggato
- */
 function isLoggedIn(): bool {
     return isset($_SESSION['user_id']);
 }
 
-/**
- * Verifica se l'utente e' admin
- */
 function isAdmin(): bool {
     return isset($_SESSION['user_ruolo']) && $_SESSION['user_ruolo'] === 'admin';
 }
 
-/**
- * Richiede login, reindirizza se non loggato
- */
 function requireLogin(): void {
     if (!isLoggedIn()) {
         header('Location: ' . BASE_PATH . '/login.php');
@@ -67,9 +49,6 @@ function requireLogin(): void {
     }
 }
 
-/**
- * Richiede ruolo admin
- */
 function requireAdmin(): void {
     requireLogin();
     if (!isAdmin()) {
@@ -78,23 +57,17 @@ function requireAdmin(): void {
     }
 }
 
-/**
- * Ottieni ID utente corrente
- */
 function getCurrentUserId(): ?int {
     return $_SESSION['user_id'] ?? null;
 }
 
-/**
- * Ottieni dati utente corrente
- */
 function getCurrentUser(): array {
     return [
-        'id' => $_SESSION['user_id'] ?? null,
-        'nome' => $_SESSION['user_nome'] ?? '',
-        'cognome' => $_SESSION['user_cognome'] ?? '',
-        'email' => $_SESSION['user_email'] ?? '',
-        'ruolo' => $_SESSION['user_ruolo'] ?? '',
-        'nome_completo' => $_SESSION['user_nome_completo'] ?? '',
+        'id'           => $_SESSION['user_id']           ?? null,
+        'nome'         => $_SESSION['user_nome']          ?? '',
+        'cognome'      => $_SESSION['user_cognome']       ?? '',
+        'email'        => $_SESSION['user_email']         ?? '',
+        'ruolo'        => $_SESSION['user_ruolo']         ?? '',
+        'nome_completo'=> $_SESSION['user_nome_completo'] ?? '',
     ];
 }

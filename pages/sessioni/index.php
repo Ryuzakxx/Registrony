@@ -2,42 +2,27 @@
 $pageTitle = 'Sessioni Laboratorio';
 require_once __DIR__ . '/../../includes/header.php';
 
-$pdo = getConnection();
+$conn = getConnection();
 
-// Filtri
-$filtroLab = $_GET['laboratorio'] ?? '';
-$filtroData = $_GET['data'] ?? '';
-$filtroClasse = $_GET['classe'] ?? '';
+$filtroLab   = mysqli_real_escape_string($conn, $_GET['laboratorio'] ?? '');
+$filtroData  = mysqli_real_escape_string($conn, $_GET['data'] ?? '');
+$filtroClasse= mysqli_real_escape_string($conn, $_GET['classe'] ?? '');
 
-$where = [];
-$params = [];
-
-if ($filtroLab) {
-    $where[] = "s.id_laboratorio = ?";
-    $params[] = $filtroLab;
-}
-if ($filtroData) {
-    $where[] = "s.data = ?";
-    $params[] = $filtroData;
-}
-if ($filtroClasse) {
-    $where[] = "s.id_classe = ?";
-    $params[] = $filtroClasse;
-}
-
+$where  = [];
+if ($filtroLab)    $where[] = "s.id_laboratorio = '$filtroLab'";
+if ($filtroData)   $where[] = "s.data = '$filtroData'";
+if ($filtroClasse) $where[] = "s.id_classe = '$filtroClasse'";
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-// Paginazione
 $perPage = 20;
-$page = max(1, intval($_GET['page'] ?? 1));
-$offset = ($page - 1) * $perPage;
+$page    = max(1, intval($_GET['page'] ?? 1));
+$offset  = ($page - 1) * $perPage;
 
-$stmtCount = $pdo->prepare("SELECT COUNT(*) FROM sessioni_laboratorio s $whereSQL");
-$stmtCount->execute($params);
-$total = $stmtCount->fetchColumn();
+$resCount = mysqli_query($conn, "SELECT COUNT(*) FROM sessioni_laboratorio s $whereSQL");
+$total    = mysqli_fetch_row($resCount)[0];
 $totalPages = ceil($total / $perPage);
 
-$stmt = $pdo->prepare("
+$result  = mysqli_query($conn, "
     SELECT s.id, s.data, s.ora_ingresso, s.ora_uscita, s.attivita_svolta, s.note,
            l.nome AS laboratorio, l.aula, c.nome AS classe,
            GROUP_CONCAT(CONCAT(u.cognome, ' ', u.nome, ' (', f.tipo_presenza, ')') ORDER BY f.tipo_presenza SEPARATOR ', ') AS docenti
@@ -51,26 +36,27 @@ $stmt = $pdo->prepare("
     ORDER BY s.data DESC, s.ora_ingresso DESC
     LIMIT $perPage OFFSET $offset
 ");
-$stmt->execute($params);
-$sessioni = $stmt->fetchAll();
+$sessioni = [];
+while ($row = mysqli_fetch_assoc($result)) $sessioni[] = $row;
 
-// Dati per filtri
-$labs = $pdo->query("SELECT id, nome FROM laboratori WHERE attivo = 1 ORDER BY nome")->fetchAll();
-$classi = $pdo->query("SELECT id, nome, anno_scolastico FROM classi WHERE attivo = 1 ORDER BY nome")->fetchAll();
+$resLabs  = mysqli_query($conn, "SELECT id, nome FROM laboratori WHERE attivo = 1 ORDER BY nome");
+$labs     = [];
+while ($row = mysqli_fetch_assoc($resLabs)) $labs[] = $row;
+
+$resClassi = mysqli_query($conn, "SELECT id, nome, anno_scolastico FROM classi WHERE attivo = 1 ORDER BY nome");
+$classi    = [];
+while ($row = mysqli_fetch_assoc($resClassi)) $classi[] = $row;
 ?>
 
-<!-- Filtri -->
 <div class="card mb-2">
     <div class="card-body">
-        <form method="GET" class="form-row" style="align-items: flex-end;">
+        <form method="GET" class="form-row" style="align-items:flex-end;">
             <div class="form-group" style="margin-bottom:0">
                 <label>Laboratorio</label>
                 <select name="laboratorio" class="form-control">
                     <option value="">Tutti</option>
                     <?php foreach ($labs as $lab): ?>
-                        <option value="<?= $lab['id'] ?>" <?= $filtroLab == $lab['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($lab['nome']) ?>
-                        </option>
+                        <option value="<?= $lab['id'] ?>" <?= $filtroLab == $lab['id'] ? 'selected' : '' ?>><?= htmlspecialchars($lab['nome']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -83,9 +69,7 @@ $classi = $pdo->query("SELECT id, nome, anno_scolastico FROM classi WHERE attivo
                 <select name="classe" class="form-control">
                     <option value="">Tutte</option>
                     <?php foreach ($classi as $cl): ?>
-                        <option value="<?= $cl['id'] ?>" <?= $filtroClasse == $cl['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($cl['nome'] . ' (' . $cl['anno_scolastico'] . ')') ?>
-                        </option>
+                        <option value="<?= $cl['id'] ?>" <?= $filtroClasse == $cl['id'] ? 'selected' : '' ?>><?= htmlspecialchars($cl['nome'] . ' (' . $cl['anno_scolastico'] . ')') ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -97,7 +81,6 @@ $classi = $pdo->query("SELECT id, nome, anno_scolastico FROM classi WHERE attivo
     </div>
 </div>
 
-<!-- Tabella sessioni -->
 <div class="card">
     <div class="card-header">
         <h3>Sessioni (<?= $total ?> totali)</h3>
@@ -105,25 +88,12 @@ $classi = $pdo->query("SELECT id, nome, anno_scolastico FROM classi WHERE attivo
     </div>
     <div class="card-body">
         <?php if (empty($sessioni)): ?>
-            <div class="empty-state">
-                <div class="empty-icon">&#128203;</div>
-                <h4>Nessuna sessione trovata</h4>
-                <p>Modifica i filtri o crea una nuova sessione.</p>
-            </div>
+            <div class="empty-state"><div class="empty-icon">&#128203;</div><h4>Nessuna sessione trovata</h4></div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Laboratorio</th>
-                            <th>Classe</th>
-                            <th>Ingresso</th>
-                            <th>Uscita</th>
-                            <th>Docenti</th>
-                            <th>Attivita</th>
-                            <th>Azioni</th>
-                        </tr>
+                        <tr><th>Data</th><th>Laboratorio</th><th>Classe</th><th>Ingresso</th><th>Uscita</th><th>Docenti</th><th>Attivita</th><th>Azioni</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach ($sessioni as $s): ?>
@@ -132,32 +102,19 @@ $classi = $pdo->query("SELECT id, nome, anno_scolastico FROM classi WHERE attivo
                             <td><strong><?= htmlspecialchars($s['laboratorio']) ?></strong><br><small class="text-muted"><?= htmlspecialchars($s['aula']) ?></small></td>
                             <td><span class="badge badge-primary"><?= htmlspecialchars($s['classe']) ?></span></td>
                             <td><?= substr($s['ora_ingresso'], 0, 5) ?></td>
-                            <td>
-                                <?php if ($s['ora_uscita']): ?>
-                                    <?= substr($s['ora_uscita'], 0, 5) ?>
-                                <?php else: ?>
-                                    <span class="badge badge-success">In corso</span>
-                                <?php endif; ?>
-                            </td>
+                            <td><?= $s['ora_uscita'] ? substr($s['ora_uscita'], 0, 5) : '<span class="badge badge-success">In corso</span>' ?></td>
                             <td><?= htmlspecialchars($s['docenti'] ?? 'Nessuna firma') ?></td>
                             <td><?= htmlspecialchars(mb_strimwidth($s['attivita_svolta'] ?? '-', 0, 50, '...')) ?></td>
-                            <td class="actions">
-                                <a href="<?= BASE_PATH ?>/pages/sessioni/dettaglio.php?id=<?= $s['id'] ?>" class="btn btn-primary btn-sm">Dettagli</a>
-                            </td>
+                            <td><a href="<?= BASE_PATH ?>/pages/sessioni/dettaglio.php?id=<?= $s['id'] ?>" class="btn btn-primary btn-sm">Dettagli</a></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-
             <?php if ($totalPages > 1): ?>
                 <div class="pagination">
                     <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                        <?php
-                        $queryParams = $_GET;
-                        $queryParams['page'] = $i;
-                        $url = '?' . http_build_query($queryParams);
-                        ?>
+                        <?php $queryParams = $_GET; $queryParams['page'] = $i; $url = '?' . http_build_query($queryParams); ?>
                         <?php if ($i == $page): ?>
                             <span class="active"><?= $i ?></span>
                         <?php else: ?>

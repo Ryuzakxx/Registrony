@@ -2,29 +2,19 @@
 $pageTitle = 'Materiali';
 require_once __DIR__ . '/../../includes/header.php';
 
-$pdo = getConnection();
-
-// Filtro laboratorio
-$filtroLab = $_GET['laboratorio'] ?? '';
+$conn      = getConnection();
+$filtroLab = mysqli_real_escape_string($conn, $_GET['laboratorio'] ?? '');
 
 $where = "WHERE m.attivo = 1";
-$params = [];
-if ($filtroLab) {
-    $where .= " AND m.id_laboratorio = ?";
-    $params[] = $filtroLab;
-}
+if ($filtroLab) $where .= " AND m.id_laboratorio = '$filtroLab'";
 
-$stmt = $pdo->prepare("
-    SELECT m.*, l.nome AS laboratorio, l.aula
-    FROM materiali m
-    JOIN laboratori l ON m.id_laboratorio = l.id
-    $where
-    ORDER BY l.nome, m.nome
-");
-$stmt->execute($params);
-$materiali = $stmt->fetchAll();
+$result   = mysqli_query($conn, "SELECT m.*, l.nome AS laboratorio, l.aula FROM materiali m JOIN laboratori l ON m.id_laboratorio = l.id $where ORDER BY l.nome, m.nome");
+$materiali= [];
+while ($row = mysqli_fetch_assoc($result)) $materiali[] = $row;
 
-$labs = $pdo->query("SELECT id, nome FROM laboratori WHERE attivo = 1 ORDER BY nome")->fetchAll();
+$resLabs = mysqli_query($conn, "SELECT id, nome FROM laboratori WHERE attivo = 1 ORDER BY nome");
+$labs    = [];
+while ($row = mysqli_fetch_assoc($resLabs)) $labs[] = $row;
 ?>
 
 <div class="card mb-2">
@@ -35,9 +25,7 @@ $labs = $pdo->query("SELECT id, nome FROM laboratori WHERE attivo = 1 ORDER BY n
                 <select name="laboratorio" class="form-control">
                     <option value="">Tutti</option>
                     <?php foreach ($labs as $lab): ?>
-                        <option value="<?= $lab['id'] ?>" <?= $filtroLab == $lab['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($lab['nome']) ?>
-                        </option>
+                        <option value="<?= $lab['id'] ?>" <?= $filtroLab==$lab['id'] ? 'selected':'' ?>><?= htmlspecialchars($lab['nome']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -50,46 +38,26 @@ $labs = $pdo->query("SELECT id, nome FROM laboratori WHERE attivo = 1 ORDER BY n
 </div>
 
 <div class="card">
-    <div class="card-header">
-        <h3>&#128230; Elenco Materiali</h3>
-    </div>
+    <div class="card-header"><h3>&#128230; Elenco Materiali</h3></div>
     <div class="card-body">
         <?php if (empty($materiali)): ?>
-            <div class="empty-state">
-                <div class="empty-icon">&#128230;</div>
-                <h4>Nessun materiale trovato</h4>
-            </div>
+            <div class="empty-state"><div class="empty-icon">&#128230;</div><h4>Nessun materiale trovato</h4></div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
-                        <tr>
-                            <th>Materiale</th>
-                            <th>Laboratorio</th>
-                            <th>Unita</th>
-                            <th>Disponibile</th>
-                            <th>Soglia Min.</th>
-                            <th>Stato</th>
-                        </tr>
+                        <tr><th>Materiale</th><th>Laboratorio</th><th>Unita</th><th>Disponibile</th><th>Soglia Min.</th><th>Stato</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach ($materiali as $m): ?>
                         <tr>
                             <td>
                                 <strong><?= htmlspecialchars($m['nome']) ?></strong>
-                                <?php if ($m['descrizione']): ?>
-                                    <br><small class="text-muted"><?= htmlspecialchars($m['descrizione']) ?></small>
-                                <?php endif; ?>
+                                <?php if ($m['descrizione']): ?><br><small class="text-muted"><?= htmlspecialchars($m['descrizione']) ?></small><?php endif; ?>
                             </td>
                             <td><?= htmlspecialchars($m['laboratorio']) ?></td>
                             <td><?= htmlspecialchars($m['unita_misura'] ?? '-') ?></td>
-                            <td>
-                                <?php if ($m['quantita_disponibile'] !== null): ?>
-                                    <strong><?= $m['quantita_disponibile'] ?></strong>
-                                <?php else: ?>
-                                    -
-                                <?php endif; ?>
-                            </td>
+                            <td><?= $m['quantita_disponibile'] !== null ? '<strong>' . $m['quantita_disponibile'] . '</strong>' : '-' ?></td>
                             <td><?= $m['soglia_minima'] ?? '-' ?></td>
                             <td>
                                 <?php if ($m['quantita_disponibile'] !== null && $m['soglia_minima'] !== null): ?>

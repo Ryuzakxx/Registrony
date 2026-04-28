@@ -2,25 +2,27 @@
 $pageTitle = 'Dashboard';
 require_once __DIR__ . '/includes/header.php';
 
-$pdo = getConnection();
+$conn  = getConnection();
 $today = date('Y-m-d');
 
-// Statistiche
-$stmtLabs = $pdo->query("SELECT COUNT(*) FROM laboratori WHERE attivo = 1");
-$totLabs = $stmtLabs->fetchColumn();
+// Stat: laboratori attivi
+$res     = mysqli_query($conn, "SELECT COUNT(*) FROM laboratori WHERE attivo = 1");
+$totLabs = mysqli_fetch_row($res)[0];
 
-$stmtSessioniOggi = $pdo->prepare("SELECT COUNT(*) FROM sessioni_laboratorio WHERE data = ?");
-$stmtSessioniOggi->execute([$today]);
-$totSessioniOggi = $stmtSessioniOggi->fetchColumn();
+// Stat: sessioni oggi
+$res            = mysqli_query($conn, "SELECT COUNT(*) FROM sessioni_laboratorio WHERE data = '$today'");
+$totSessioniOggi= mysqli_fetch_row($res)[0];
 
-$stmtSegnAperte = $pdo->query("SELECT COUNT(*) FROM segnalazioni WHERE stato IN ('aperta','in_lavorazione')");
-$totSegnAperte = $stmtSegnAperte->fetchColumn();
+// Stat: segnalazioni aperte
+$res          = mysqli_query($conn, "SELECT COUNT(*) FROM segnalazioni WHERE stato IN ('aperta','in_lavorazione')");
+$totSegnAperte= mysqli_fetch_row($res)[0];
 
-$stmtMatEsaurimento = $pdo->query("SELECT COUNT(*) FROM materiali WHERE attivo = 1 AND quantita_disponibile IS NOT NULL AND soglia_minima IS NOT NULL AND quantita_disponibile <= soglia_minima");
-$totMatEsaurimento = $stmtMatEsaurimento->fetchColumn();
+// Stat: materiali in esaurimento
+$res             = mysqli_query($conn, "SELECT COUNT(*) FROM materiali WHERE attivo = 1 AND quantita_disponibile IS NOT NULL AND soglia_minima IS NOT NULL AND quantita_disponibile <= soglia_minima");
+$totMatEsaurimento= mysqli_fetch_row($res)[0];
 
 // Sessioni di oggi
-$stmtOggi = $pdo->prepare("
+$result      = mysqli_query($conn, "
     SELECT s.id, s.data, s.ora_ingresso, s.ora_uscita, s.attivita_svolta,
            l.nome AS laboratorio, l.aula, c.nome AS classe,
            GROUP_CONCAT(CONCAT(u.cognome, ' ', u.nome, ' (', f.tipo_presenza, ')') ORDER BY f.tipo_presenza SEPARATOR ', ') AS docenti
@@ -29,15 +31,15 @@ $stmtOggi = $pdo->prepare("
     JOIN classi c ON s.id_classe = c.id
     LEFT JOIN firme_sessioni f ON s.id = f.id_sessione
     LEFT JOIN utenti u ON f.id_docente = u.id
-    WHERE s.data = ?
+    WHERE s.data = '$today'
     GROUP BY s.id
     ORDER BY s.ora_ingresso DESC
 ");
-$stmtOggi->execute([$today]);
-$sessioniOggi = $stmtOggi->fetchAll();
+$sessioniOggi = [];
+while ($row = mysqli_fetch_assoc($result)) $sessioniOggi[] = $row;
 
-// Ultime segnalazioni aperte
-$stmtSegn = $pdo->query("
+// Segnalazioni aperte
+$result = mysqli_query($conn, "
     SELECT sg.id, sg.titolo, sg.priorita, sg.stato, sg.data_segnalazione,
            l.nome AS laboratorio, CONCAT(u.cognome, ' ', u.nome) AS segnalato_da
     FROM segnalazioni sg
@@ -47,10 +49,10 @@ $stmtSegn = $pdo->query("
     ORDER BY FIELD(sg.priorita, 'urgente','alta','media','bassa'), sg.data_segnalazione DESC
     LIMIT 5
 ");
-$segnalazioni = $stmtSegn->fetchAll();
+$segnalazioni = [];
+while ($row = mysqli_fetch_assoc($result)) $segnalazioni[] = $row;
 ?>
 
-<!-- Stat Cards -->
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-icon blue">&#128187;</div>
@@ -82,7 +84,6 @@ $segnalazioni = $stmtSegn->fetchAll();
     </div>
 </div>
 
-<!-- Sessioni di oggi -->
 <div class="card">
     <div class="card-header">
         <h3>&#128197; Sessioni di oggi (<?= date('d/m/Y') ?>)</h3>
@@ -93,21 +94,13 @@ $segnalazioni = $stmtSegn->fetchAll();
             <div class="empty-state">
                 <div class="empty-icon">&#128203;</div>
                 <h4>Nessuna sessione oggi</h4>
-                <p>Non ci sono sessioni di laboratorio registrate per oggi.</p>
+                <p>Non ci sono sessioni registrate per oggi.</p>
             </div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
-                        <tr>
-                            <th>Laboratorio</th>
-                            <th>Aula</th>
-                            <th>Classe</th>
-                            <th>Ingresso</th>
-                            <th>Uscita</th>
-                            <th>Docenti</th>
-                            <th>Attivita</th>
-                        </tr>
+                        <tr><th>Laboratorio</th><th>Aula</th><th>Classe</th><th>Ingresso</th><th>Uscita</th><th>Docenti</th><th>Attivita</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach ($sessioniOggi as $s): ?>
@@ -116,13 +109,7 @@ $segnalazioni = $stmtSegn->fetchAll();
                             <td><?= htmlspecialchars($s['aula']) ?></td>
                             <td><span class="badge badge-primary"><?= htmlspecialchars($s['classe']) ?></span></td>
                             <td><?= $s['ora_ingresso'] ?></td>
-                            <td>
-                                <?php if ($s['ora_uscita']): ?>
-                                    <?= $s['ora_uscita'] ?>
-                                <?php else: ?>
-                                    <span class="badge badge-success">In corso</span>
-                                <?php endif; ?>
-                            </td>
+                            <td><?= $s['ora_uscita'] ? $s['ora_uscita'] : '<span class="badge badge-success">In corso</span>' ?></td>
                             <td><?= htmlspecialchars($s['docenti'] ?? 'Nessuna firma') ?></td>
                             <td><?= htmlspecialchars(mb_strimwidth($s['attivita_svolta'] ?? '', 0, 60, '...')) ?></td>
                         </tr>
@@ -134,7 +121,6 @@ $segnalazioni = $stmtSegn->fetchAll();
     </div>
 </div>
 
-<!-- Segnalazioni aperte -->
 <div class="card">
     <div class="card-header">
         <h3>&#9888; Segnalazioni aperte</h3>
@@ -151,14 +137,7 @@ $segnalazioni = $stmtSegn->fetchAll();
             <div class="table-responsive">
                 <table class="table">
                     <thead>
-                        <tr>
-                            <th>Titolo</th>
-                            <th>Laboratorio</th>
-                            <th>Priorita</th>
-                            <th>Stato</th>
-                            <th>Segnalato da</th>
-                            <th>Data</th>
-                        </tr>
+                        <tr><th>Titolo</th><th>Laboratorio</th><th>Priorita</th><th>Stato</th><th>Segnalato da</th><th>Data</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach ($segnalazioni as $sg): ?>
@@ -166,20 +145,11 @@ $segnalazioni = $stmtSegn->fetchAll();
                             <td><strong><?= htmlspecialchars($sg['titolo']) ?></strong></td>
                             <td><?= htmlspecialchars($sg['laboratorio']) ?></td>
                             <td>
-                                <?php
-                                $badgeClass = match($sg['priorita']) {
-                                    'urgente' => 'badge-danger',
-                                    'alta' => 'badge-warning',
-                                    'media' => 'badge-info',
-                                    default => 'badge-secondary',
-                                };
-                                ?>
-                                <span class="badge <?= $badgeClass ?>"><?= $sg['priorita'] ?></span>
+                                <?php $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' }; ?>
+                                <span class="badge <?= $bc ?>"><?= $sg['priorita'] ?></span>
                             </td>
                             <td>
-                                <span class="badge <?= $sg['stato'] === 'aperta' ? 'badge-danger' : 'badge-warning' ?>">
-                                    <?= $sg['stato'] ?>
-                                </span>
+                                <span class="badge <?= $sg['stato']==='aperta' ? 'badge-danger' : 'badge-warning' ?>"><?= $sg['stato'] ?></span>
                             </td>
                             <td><?= htmlspecialchars($sg['segnalato_da']) ?></td>
                             <td><?= date('d/m/Y', strtotime($sg['data_segnalazione'])) ?></td>
