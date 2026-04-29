@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cognome  = capitalizzaNome($_POST['cognome'] ?? '');
         $email    = trim($_POST['email']    ?? '');
         $password = $_POST['password']      ?? '';
-        $ruolo    = in_array($_POST['ruolo'] ?? '', ['admin','docente']) ? $_POST['ruolo'] : 'docente';
+        $ruolo    = in_array($_POST['ruolo'] ?? '', ['admin','docente','tecnico']) ? $_POST['ruolo'] : 'docente';
         $telefono = trim($_POST['telefono'] ?? '');
         $errors   = [];
 
@@ -52,10 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nome     = capitalizzaNome($_POST['nome']    ?? '');
         $cognome  = capitalizzaNome($_POST['cognome'] ?? '');
         $email    = trim($_POST['email']     ?? '');
-        $ruolo    = in_array($_POST['ruolo'] ?? '', ['admin','docente']) ? $_POST['ruolo'] : 'docente';
+        $ruolo    = in_array($_POST['ruolo'] ?? '', ['admin','docente','tecnico']) ? $_POST['ruolo'] : 'docente';
         $telefono = trim($_POST['telefono']  ?? '');
         $attivo   = isset($_POST['attivo'])  ? 1 : 0;
         $newPass  = $_POST['new_password']   ?? '';
+        $labIds   = array_map('intval', $_POST['lab_ids'] ?? []);
         $errors   = [];
 
         if (!$nome)                                                  $errors[] = $L['utenti_err_nome'];
@@ -63,6 +64,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL))   $errors[] = $L['utenti_err_email'];
         if ($newPass && strlen($newPass) < 6)                        $errors[] = $L['utenti_err_pwd'];
         if ($telefono && !preg_match('/^[0-9\s\+\-\.()]{7,25}$/', $telefono)) $errors[] = $L['utenti_err_tel'];
+
+        // Vincolo: un tecnico NON può essere responsabile di un laboratorio
+        if ($ruolo === 'tecnico') {
+            $resResp = mysqli_query($conn, "SELECT nome FROM laboratori WHERE id_responsabile = $id");
+            if (mysqli_num_rows($resResp) > 0) {
+                $nomiLab = [];
+                while ($r = mysqli_fetch_assoc($resResp)) $nomiLab[] = $r['nome'];
+                $errors[] = 'Un assistente tecnico non può essere responsabile di laboratorio. Rimuovi prima la responsabilità su: ' . implode(', ', $nomiLab);
+            }
+        }
 
         if (empty($errors) && $id) {
             $n_e  = mysqli_real_escape_string($conn, $nome);
@@ -76,6 +87,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
             }
+
+            // Gestisci assegnazione laboratori: solo per docenti
+            // Cancella sempre le vecchie assegnazioni (se ruolo cambia da docente → le perderà giustamente)
+            mysqli_query($conn, "DELETE FROM docenti_laboratori WHERE id_docente=$id");
+            if ($ruolo === 'docente' && !empty($labIds)) {
+                foreach ($labIds as $labId) {
+                    if ($labId > 0) {
+                        mysqli_query($conn, "INSERT IGNORE INTO docenti_laboratori (id_docente, id_laboratorio) VALUES ($id, $labId)");
+                    }
+                }
+            }
+
             header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?success=' . urlencode($L['utenti_ok_aggiornato']));
             exit;
         } else {
@@ -91,12 +114,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Controlla se l'utente è responsabile di qualche laboratorio
+        // Controlla se è responsabile di qualche laboratorio
         $resLab = mysqli_query($conn, "SELECT nome FROM laboratori WHERE id_responsabile = $id");
         if (mysqli_num_rows($resLab) > 0) {
             $nomiLab = [];
             while ($row = mysqli_fetch_assoc($resLab)) $nomiLab[] = $row['nome'];
             $errMsg = 'Impossibile eliminare: l\'utente è responsabile dei laboratori: ' . implode(', ', $nomiLab) . '. Riassegna prima il responsabile.';
+            header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?error=' . urlencode($errMsg));
+            exit;
+        }
+
+        // Controlla se è assistente tecnico di qualche laboratorio
+        $resTec = mysqli_query($conn, "SELECT nome FROM laboratori WHERE id_assistente_tecnico = $id");
+        if (mysqli_num_rows($resTec) > 0) {
+            $nomiLab = [];
+            while ($row = mysqli_fetch_assoc($resTec)) $nomiLab[] = $row['nome'];
+            $errMsg = 'Impossibile eliminare: l\'utente è assistente tecnico dei laboratori: ' . implode(', ', $nomiLab) . '. Riassegna prima il tecnico.';
             header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?error=' . urlencode($errMsg));
             exit;
         }
@@ -126,6 +159,30 @@ if (isset($_GET['edit'])) {
 }
 
 $isEdit = $editUser !== null;
+
+// Tutti i laboratori attivi (per il pannello assegnazione)
+$allLabs = [];
+$resLabs = mysqli_query($conn, "SELECT id, nome, aula FROM laboratori WHERE attivo=1 ORDER BY nome");
+while ($row = mysqli_fetch_assoc($resLabs)) $allLabs[] = $row;
+
+// Lab già assegnati al docente in modifica
+$assignedLabIds = [];
+if ($isEdit && $editUser['ruolo'] === 'docente') {
+    $resAssigned = mysqli_query($conn, "SELECT id_laboratorio FROM docenti_laboratori WHERE id_docente=" . (int)$editUser['id']);
+    while ($row = mysqli_fetch_assoc($resAssigned)) $assignedLabIds[] = (int)$row['id_laboratorio'];
+}
+
+// Mappa docente→lab per la colonna nella tabella utenti
+$docenteLabsMap = [];
+$resDocLabs = mysqli_query($conn, "
+    SELECT dl.id_docente, l.nome, l.aula, (l.id_responsabile = dl.id_docente) AS is_resp
+    FROM docenti_laboratori dl
+    JOIN laboratori l ON dl.id_laboratorio = l.id
+    ORDER BY dl.id_docente, l.nome
+");
+while ($row = mysqli_fetch_assoc($resDocLabs)) {
+    $docenteLabsMap[$row['id_docente']][] = $row;
+}
 ?>
 
 <?php formFieldStyles(); ?>
@@ -210,13 +267,17 @@ $isEdit = $editUser !== null;
 
             <div class="form-row">
                 <?php
-                formSelect('ruolo', $L['utenti_ruolo'], [
-                    '' => $L['seleziona'],
-                    'docente' => $L['utenti_ruolo_docente'],
+                // Ruolo: tutti e 3 i ruoli disponibili
+                $ruoloOptions = [
+                    ''        => $L['seleziona'],
+                    'docente' => $L['utenti_ruolo_docente'] ?? 'Docente',
+                    'tecnico' => 'Tecnico',
                     'admin'   => $L['utenti_ruolo_admin'],
-                ], [
+                ];
+                formSelect('ruolo', $L['utenti_ruolo'], $ruoloOptions, [
                     'selected' => $editUser['ruolo'] ?? 'docente',
                     'required' => true,
+                    'extra'    => 'id="selectRuolo"',
                 ]);
                 formTelefono('tel_numero', $L['utenti_telefono'], [
                     'value'       => $editUser['telefono'] ?? '',
@@ -230,7 +291,41 @@ $isEdit = $editUser !== null;
                 <?php formCheckbox('attivo', $L['utenti_attivo_label'], (bool)$editUser['attivo']); ?>
             <?php endif; ?>
 
-            <div class="d-flex gap-2">
+            <!-- ============================================================
+                 SEZIONE ASSEGNAZIONE LABORATORI (solo per docenti)
+                 Visibile dinamicamente via JS in base al ruolo selezionato.
+                 I tecnici vengono invece associati ai lab dal pannello Laboratori
+                 tramite il campo id_assistente_tecnico.
+                 ============================================================ -->
+            <div id="labAssignSection" style="display:<?= ($isEdit && $editUser['ruolo'] === 'docente') ? 'block' : 'none' ?>; margin-top:1.5rem;">
+                <hr style="margin-bottom:1rem; border:none; border-top:1px solid var(--border,#e0e0e0);">
+                <h4 style="margin-bottom:.5rem; font-size:1rem; font-weight:600; display:flex; align-items:center; gap:.4rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Laboratori assegnati al docente
+                </h4>
+                <p style="color:var(--text-light,#888);font-size:.85rem;margin-bottom:.75rem;">
+                    Spunta i laboratori a cui questo docente può accedere. Il badge <strong>Responsabile</strong> si assegna nel pannello <em>Laboratori</em>.
+                </p>
+                <?php if (empty($allLabs)): ?>
+                    <p style="color:var(--text-light,#888);font-size:.9rem;">Nessun laboratorio attivo disponibile.</p>
+                <?php else: ?>
+                    <div class="lab-checkboxes-grid">
+                        <?php foreach ($allLabs as $lab): ?>
+                            <label class="lab-checkbox-item">
+                                <input type="checkbox" name="lab_ids[]" value="<?= (int)$lab['id'] ?>"
+                                    <?= in_array((int)$lab['id'], $assignedLabIds) ? 'checked' : '' ?>>
+                                <span class="lab-checkbox-nome"><?= htmlspecialchars($lab['nome']) ?></span>
+                                <span class="lab-checkbox-aula">Aula <?= htmlspecialchars($lab['aula']) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                <p style="margin-top:.6rem;font-size:.78rem;color:var(--text-light,#888);">
+                    &#9888;&#65039; I tecnici NON si assegnano qui: la loro associazione ai lab avviene nella gestione <strong>Laboratori</strong> (campo "Assistente Tecnico").
+                </p>
+            </div>
+
+            <div class="d-flex gap-2" style="margin-top:1.25rem;">
                 <button type="submit" class="btn btn-success">
                     <?= htmlspecialchars($isEdit ? $L['utenti_btn_salva'] : $L['utenti_btn_crea']) ?>
                 </button>
@@ -257,6 +352,7 @@ $isEdit = $editUser !== null;
                             <th><?= htmlspecialchars($L['utenti_col_nome_cognome']) ?></th>
                             <th><?= htmlspecialchars($L['utenti_col_email']) ?></th>
                             <th><?= htmlspecialchars($L['utenti_col_ruolo']) ?></th>
+                            <th>Laboratori</th>
                             <th><?= htmlspecialchars($L['utenti_col_telefono']) ?></th>
                             <th><?= htmlspecialchars($L['utenti_col_stato']) ?></th>
                             <th><?= htmlspecialchars($L['azioni']) ?></th>
@@ -268,9 +364,48 @@ $isEdit = $editUser !== null;
                             <td><strong><?= htmlspecialchars($u['cognome'] . ' ' . $u['nome']) ?></strong></td>
                             <td><?= htmlspecialchars($u['email']) ?></td>
                             <td>
-                                <span class="badge <?= $u['ruolo'] === 'admin' ? 'badge-primary' : 'badge-secondary' ?>">
-                                    <?= $u['ruolo'] === 'admin' ? 'Admin' : 'Docente' ?>
-                                </span>
+                                <?php
+                                $badgeClass = match($u['ruolo']) {
+                                    'admin'   => 'badge-primary',
+                                    'tecnico' => 'badge-warning',
+                                    default   => 'badge-secondary',
+                                };
+                                $ruoloLabel = match($u['ruolo']) {
+                                    'admin'   => 'Admin',
+                                    'tecnico' => 'Tecnico',
+                                    default   => 'Docente',
+                                };
+                                ?>
+                                <span class="badge <?= $badgeClass ?>"><?= $ruoloLabel ?></span>
+                            </td>
+                            <td>
+                                <?php if ($u['ruolo'] === 'docente' && !empty($docenteLabsMap[$u['id']])): ?>
+                                    <div class="lab-tags">
+                                        <?php foreach ($docenteLabsMap[$u['id']] as $dl): ?>
+                                            <span class="lab-tag <?= $dl['is_resp'] ? 'lab-tag-resp' : '' ?>">
+                                                <?= htmlspecialchars($dl['nome']) ?>
+                                                <?php if ($dl['is_resp']): ?><em title="Responsabile"> &#9733;</em><?php endif; ?>
+                                            </span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php elseif ($u['ruolo'] === 'tecnico'): ?>
+                                    <?php
+                                    $resTecLabs = mysqli_query($conn, "SELECT nome FROM laboratori WHERE id_assistente_tecnico={$u['id']} AND attivo=1 ORDER BY nome");
+                                    $tecLabs = [];
+                                    while ($tl = mysqli_fetch_assoc($resTecLabs)) $tecLabs[] = $tl['nome'];
+                                    ?>
+                                    <?php if (!empty($tecLabs)): ?>
+                                        <div class="lab-tags">
+                                            <?php foreach ($tecLabs as $tln): ?>
+                                                <span class="lab-tag lab-tag-tec"><?= htmlspecialchars($tln) ?></span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span style="color:var(--text-light,#aaa);font-size:.85rem;">—</span>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span style="color:var(--text-light,#aaa);font-size:.85rem;">—</span>
+                                <?php endif; ?>
                             </td>
                             <td><?= htmlspecialchars($u['telefono'] ?? '-') ?></td>
                             <td>
@@ -298,8 +433,24 @@ $isEdit = $editUser !== null;
 </div>
 
 <style>
-.pwd-toggle-btn { position:absolute; right:32px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:15px; color:var(--text-light); padding:4px; line-height:1; }
-.pwd-toggle-btn:hover { color:var(--primary); }
+.pwd-toggle-btn { position:absolute; right:32px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:15px; color:var(--text-light,#888); padding:4px; line-height:1; }
+.pwd-toggle-btn:hover { color:var(--primary,#01696f); }
+
+/* Griglia checkbox lab */
+.lab-checkboxes-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:.45rem; margin-bottom:.5rem; }
+.lab-checkbox-item { display:flex; align-items:center; gap:.5rem; padding:.45rem .75rem; background:var(--bg-light,#f9f9f9); border:1.5px solid var(--border,#e0e0e0); border-radius:6px; cursor:pointer; transition:border-color .15s, background .15s; user-select:none; }
+.lab-checkbox-item:hover { border-color:var(--primary,#01696f); background:#f0f8f8; }
+.lab-checkbox-item input[type=checkbox] { flex-shrink:0; width:16px; height:16px; accent-color:var(--primary,#01696f); cursor:pointer; }
+.lab-checkbox-item input[type=checkbox]:checked ~ .lab-checkbox-nome { color:var(--primary,#01696f); }
+.lab-checkbox-nome { font-weight:600; font-size:.88rem; flex:1; }
+.lab-checkbox-aula { font-size:.75rem; color:var(--text-light,#888); white-space:nowrap; }
+
+/* Tag lab nella tabella */
+.lab-tags { display:flex; flex-wrap:wrap; gap:.25rem; }
+.lab-tag { font-size:.72rem; padding:2px 8px; border-radius:20px; background:#e8f4f4; color:#01696f; border:1px solid #c5e0e0; white-space:nowrap; }
+.lab-tag-resp { background:#fef9e7; color:#b8860b; border-color:#f0d060; }
+.lab-tag-tec  { background:#fef3e2; color:#c07000; border-color:#f0c080; }
+.lab-tag em   { font-style:normal; margin-left:2px; }
 </style>
 
 <?php formFieldScripts(); ?>
@@ -322,6 +473,18 @@ $isEdit = $editUser !== null;
             el.value = titleCase(el.value.trim());
         });
     });
+})();
+
+/* Mostra/nascondi sezione assegnazione lab in base al ruolo selezionato */
+(function () {
+    const sel     = document.getElementById('selectRuolo');
+    const section = document.getElementById('labAssignSection');
+    if (!sel || !section) return;
+    function toggle() {
+        section.style.display = sel.value === 'docente' ? 'block' : 'none';
+    }
+    sel.addEventListener('change', toggle);
+    toggle(); // stato iniziale
 })();
 
 (function () {
