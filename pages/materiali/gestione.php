@@ -1,6 +1,8 @@
 <?php
 /* ================================================================
-   Gestione Materiali — accessibile ad admin e responsabili di lab
+   Gestione Materiali
+   Accesso: solo admin e responsabili di laboratorio.
+   Tecnici e docenti ordinari vengono bloccati qui.
    ================================================================ */
 require_once __DIR__ . '/../../config/auth.php';
 requireLogin();
@@ -10,24 +12,47 @@ require_once __DIR__ . '/../../config/database.php';
 $conn = getConnection();
 $L    = lang();
 
-// Laboratori che l'utente può gestire
+/* --- Guardia esplicita: solo admin o responsabile di almeno un lab --- */
+if (!isAdmin()) {
+    if (!isDocente()) {
+        // tecnici, ruoli sconosciuti
+        header('Location: ' . BASE_PATH . '/index.php?error=unauthorized');
+        exit;
+    }
+    $uid_guard = intval(getCurrentUserId());
+    $r_guard   = mysqli_query($conn,
+        "SELECT 1 FROM laboratori WHERE id_responsabile = $uid_guard AND attivo = 1 LIMIT 1");
+    if (mysqli_num_rows($r_guard) === 0) {
+        header('Location: ' . BASE_PATH . '/index.php?error=unauthorized');
+        exit;
+    }
+}
+
+/* Laboratori che l'utente può gestire */
 if (isAdmin()) {
     $resLabs = mysqli_query($conn, "SELECT id, nome FROM laboratori WHERE attivo = 1 ORDER BY nome");
 } else {
     $userId  = intval(getCurrentUserId());
-    $resLabs = mysqli_query($conn, "SELECT id, nome FROM laboratori WHERE attivo = 1 AND id_responsabile = $userId ORDER BY nome");
+    $resLabs = mysqli_query($conn,
+        "SELECT id, nome FROM laboratori WHERE attivo = 1 AND id_responsabile = $userId ORDER BY nome");
 }
 $labs = [];
 while ($row = mysqli_fetch_assoc($resLabs)) $labs[] = $row;
 
-// Se non è responsabile di nessun lab e non è admin, accesso negato
+/* Failsafe: se per qualsiasi motivo $labs è vuoto, redirect */
 if (empty($labs)) {
     header('Location: ' . BASE_PATH . '/index.php?error=unauthorized');
     exit;
 }
 
-$labIds   = array_column($labs, 'id');          // IDs gestibili dall'utente
-$labIdsIn = implode(',', $labIds);              // per WHERE IN
+$labIds   = array_column($labs, 'id');
+$labIdsIn = implode(',', $labIds);
+
+/* Se docente, pre-seleziona il lab attivo in sessione */
+$defaultLab = null;
+if (isDocente() && getSelectedLabId() && in_array((int)getSelectedLabId(), $labIds)) {
+    $defaultLab = (int)getSelectedLabId();
+}
 
 $unitaPredefinite = ['pezzi','litri','ml','kg','g','metri','cm','rotoli','confezioni','scatole','flaconi','bottiglie'];
 
@@ -44,7 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $attivo   = isset($_POST['attivo']) ? 1 : 0;
         $errors   = [];
 
-        // Verifica che il laboratorio scelto sia tra quelli gestibili
         if (!in_array($idLab, $labIds)) {
             header('Location: ' . BASE_PATH . '/pages/materiali/gestione.php?error=' . urlencode('Laboratorio non autorizzato'));
             exit;
@@ -68,7 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . BASE_PATH . '/pages/materiali/gestione.php?success=' . urlencode($L['mat_ok_creato']));
             } else {
                 $id    = intval($_POST['id'] ?? 0);
-                // Verifica che il materiale da modificare appartenga a un lab autorizzato
                 $check = mysqli_query($conn, "SELECT id_laboratorio FROM materiali WHERE id = $id");
                 $mat   = mysqli_fetch_assoc($check);
                 if (!$mat || !in_array((int)$mat['id_laboratorio'], $labIds)) {
@@ -103,9 +126,10 @@ $pageTitle = $L['mat_titolo_gest'] ?? 'Gestione Materiali';
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/form_helpers.php';
 
-$filtroLab = intval($_GET['laboratorio'] ?? 0);
-// Il filtro lab deve essere tra quelli autorizzati
+/* Filtro lab: per docenti blocca sul lab della sessione, admin può scegliere */
+$filtroLab = intval($_GET['laboratorio'] ?? ($defaultLab ?? 0));
 if ($filtroLab && !in_array($filtroLab, $labIds)) $filtroLab = 0;
+$labForzato = (!isAdmin() && count($labs) === 1);
 
 $whereClause = "WHERE m.id_laboratorio IN ($labIdsIn)";
 if ($filtroLab) $whereClause .= " AND m.id_laboratorio = $filtroLab";
@@ -116,10 +140,9 @@ while ($row = mysqli_fetch_assoc($result)) $materiali[] = $row;
 
 $editMat = null;
 if (isset($_GET['edit'])) {
-    $editId  = intval($_GET['edit']);
-    $res     = mysqli_query($conn, "SELECT * FROM materiali WHERE id = $editId");
+    $editId    = intval($_GET['edit']);
+    $res       = mysqli_query($conn, "SELECT * FROM materiali WHERE id = $editId");
     $candidate = mysqli_fetch_assoc($res);
-    // Solo se appartiene a un lab autorizzato
     if ($candidate && in_array((int)$candidate['id_laboratorio'], $labIds)) {
         $editMat = $candidate;
     }
@@ -127,11 +150,12 @@ if (isset($_GET['edit'])) {
 
 $isEdit = $editMat !== null;
 
-$labsMap = ['' => $L['mat_seleziona_lab'] ?? '-- Seleziona laboratorio --'];
+$labsMap = [''];
+if (!$labForzato) $labsMap[''] = $L['mat_seleziona_lab'] ?? '-- Seleziona laboratorio --';
 foreach ($labs as $lab) { $labsMap[$lab['id']] = $lab['nome']; }
 
 $unitaCorrente = $editMat['unita_misura'] ?? '';
-$unitaMap = ['' => $L['mat_unita_vuota'] ?? '-- Unità --'];
+$unitaMap      = ['' => $L['mat_unita_vuota'] ?? '-- Unità --'];
 foreach ($unitaPredefinite as $u) { $unitaMap[$u] = $u; }
 if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
     $unitaMap[$unitaCorrente] = $unitaCorrente . ' (personalizzata)';
@@ -166,10 +190,17 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
                     'required'    => true,
                     'max'         => 150,
                 ]);
-                formSelect('id_laboratorio', $L['mat_lab'] ?? 'Laboratorio', $labsMap, [
-                    'selected' => (string)($editMat['id_laboratorio'] ?? ''),
-                    'required' => true,
-                ]);
+                if ($labForzato) {
+                    // Lab unico: campo nascosto + label visibile
+                    echo '<div class="form-group"><label>' . htmlspecialchars($L['mat_lab'] ?? 'Laboratorio') . '</label>';
+                    echo '<div style="padding:8px 12px;background:#e8f4f4;border-radius:6px;font-weight:600;color:#01696f">' . htmlspecialchars($labs[0]['nome']) . '</div>';
+                    echo '<input type="hidden" name="id_laboratorio" value="' . $labs[0]['id'] . '"></div>';
+                } else {
+                    formSelect('id_laboratorio', $L['mat_lab'] ?? 'Laboratorio', $labsMap, [
+                        'selected' => (string)($editMat['id_laboratorio'] ?? ($defaultLab ?? '')),
+                        'required' => true,
+                    ]);
+                }
                 ?>
             </div>
 
@@ -179,19 +210,13 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
                     'selected' => $unitaCorrente,
                 ]);
                 formField('quantita_disponibile', $L['mat_quantita'] ?? 'Quantità disponibile', [
-                    'type'        => 'number',
-                    'value'       => $editMat['quantita_disponibile'] ?? '',
-                    'placeholder' => '0',
-                    'min'         => 0,
-                    'step'        => '0.01',
+                    'type'  => 'number', 'value' => $editMat['quantita_disponibile'] ?? '',
+                    'placeholder' => '0', 'min' => 0, 'step' => '0.01',
                 ]);
                 formField('soglia_minima', $L['mat_soglia'] ?? 'Soglia minima', [
-                    'type'        => 'number',
-                    'value'       => $editMat['soglia_minima'] ?? '',
-                    'placeholder' => '0',
-                    'hint'        => $L['mat_soglia_hint'] ?? 'Avviso scorte basse',
-                    'min'         => 0,
-                    'step'        => '0.01',
+                    'type'  => 'number', 'value' => $editMat['soglia_minima'] ?? '',
+                    'placeholder' => '0', 'hint' => $L['mat_soglia_hint'] ?? 'Avviso scorte basse',
+                    'min'   => 0, 'step' => '0.01',
                 ]);
                 ?>
             </div>
@@ -221,6 +246,7 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
     </div>
 </div>
 
+<?php if (!$labForzato): /* Filtro lab solo se l'utente gestisce più lab */ ?>
 <div class="card mb-2">
     <div class="card-body">
         <form method="GET" class="d-flex gap-2 align-center flex-wrap">
@@ -240,6 +266,7 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
         </form>
     </div>
 </div>
+<?php endif; ?>
 
 <div class="card">
     <div class="card-header">
@@ -248,9 +275,7 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
     <div class="card-body">
         <?php if (empty($materiali)): ?>
             <div class="empty-state">
-                <div class="empty-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-                </div>
+                <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
                 <h4><?= htmlspecialchars($L['mat_nessuno'] ?? 'Nessun materiale') ?></h4>
             </div>
         <?php else: ?>
@@ -259,7 +284,7 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
                     <thead>
                         <tr>
                             <th><?= htmlspecialchars($L['nome'] ?? 'Nome') ?></th>
-                            <th><?= htmlspecialchars($L['mat_lab'] ?? 'Lab') ?></th>
+                            <?php if (!$labForzato): ?><th><?= htmlspecialchars($L['mat_lab'] ?? 'Lab') ?></th><?php endif; ?>
                             <th><?= htmlspecialchars($L['mat_unita_col'] ?? 'Unità') ?></th>
                             <th><?= htmlspecialchars($L['mat_disponibile'] ?? 'Disponibile') ?></th>
                             <th><?= htmlspecialchars($L['mat_soglia_col'] ?? 'Soglia') ?></th>
@@ -276,7 +301,7 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
                                     <br><small class="text-muted"><?= htmlspecialchars($m['descrizione']) ?></small>
                                 <?php endif; ?>
                             </td>
-                            <td><?= htmlspecialchars($m['laboratorio']) ?></td>
+                            <?php if (!$labForzato): ?><td><?= htmlspecialchars($m['laboratorio']) ?></td><?php endif; ?>
                             <td><?= htmlspecialchars($m['unita_misura'] ?? '-') ?></td>
                             <td><strong><?= $m['quantita_disponibile'] ?? '-' ?></strong></td>
                             <td><?= $m['soglia_minima'] ?? '-' ?></td>
