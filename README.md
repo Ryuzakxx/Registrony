@@ -50,7 +50,10 @@ registrony/
 │   └── database.php     # Connessione MySQLi
 ├── includes/
 │   ├── header.php       # Layout header + sidebar
-│   └── footer.php       # Layout footer
+│   └── footer.php      # Layout footer
+|   └── form_helpers.php
+├── lang/
+|   ├── it.php
 ├── pages/
 │   ├── admin/
 │   │   ├── classi.php
