@@ -7,7 +7,8 @@
  *  - input / select / textarea
  *  - div .field-hint  (suggerimento contestuale fisso)
  *  - div .field-error (errore JS, inizialmente nascosto)
- *  - icona di stato ✓/✗ animata via CSS
+ *  - icona di stato ✓/✗ animata via CSS (nascosta sui <select> per non
+ *    sovrapporsi alla freccia nativa del dropdown)
  *
  * Tutte le stringhe visibili provengono dal file lang/it.php tramite L().
  */
@@ -20,27 +21,6 @@ if (!function_exists('L')) {
    FIELD — TEXT / EMAIL / PASSWORD / NUMBER / DATE / TIME
    ============================================================ */
 
-/**
- * Genera un campo <input> con label, hint ed errore.
- *
- * @param string $id           ID e name dell'input
- * @param string $label        Testo label
- * @param array  $opts {
- *   type        string   default 'text'
- *   value       string
- *   placeholder string
- *   hint        string   testo aiuto sotto il campo
- *   required    bool
- *   max         int      maxlength
- *   min         mixed    min attr
- *   step        mixed    step attr
- *   pattern     string
- *   autocomplete string
- *   extra       string   attributi HTML extra
- *   counter     bool     mostra contatore caratteri (se max impostato)
- *   error_id    string   id del div errore (default: err_{$id})
- * }
- */
 function formField(string $id, string $label, array $opts = []): void {
     $type         = $opts['type']         ?? 'text';
     $value        = htmlspecialchars($opts['value'] ?? '');
@@ -137,9 +117,6 @@ HTML;
 /* ============================================================
    FIELD — SELECT
    ============================================================ */
-/**
- * @param array $options  [ value => label, ... ]  oppure [ ['value'=>..,'label'=>..,'disabled'=>bool], ... ]
- */
 function formSelect(string $id, string $label, array $options, array $opts = []): void {
     $selected  = (string)($opts['selected'] ?? '');
     $hint      = $opts['hint']     ?? '';
@@ -152,7 +129,7 @@ function formSelect(string $id, string $label, array $options, array $opts = [])
     echo <<<HTML
 <div class="form-group fg-{$id}">
   <label for="{$id}">{$label}{$reqMark}</label>
-  <div class="field-wrap">
+  <div class="field-wrap field-wrap--select">
     <select id="{$id}" name="{$id}" class="form-control" {$reqAttr} {$extra}>
 HTML;
 
@@ -172,7 +149,8 @@ HTML;
     }
 
     echo "    </select>\n";
-    echo "    <span class=\"field-status\" aria-hidden=\"true\"></span>\n";
+    /* Nessuna .field-status qui: il bordo is-valid/is-invalid è sufficiente
+       e l'icona si sovrapporrebbe alla freccia nativa del dropdown. */
     echo "  </div>\n";
 
     if ($hint) {
@@ -184,7 +162,6 @@ HTML;
 
 /* ============================================================
    FIELD — TELEFONO CON PREFISSO
-   Prefisso internazionale + numero separati, poi uniti al submit
    ============================================================ */
 function formTelefono(string $idNumero, string $label, array $opts = []): void {
     $L         = lang();
@@ -195,7 +172,6 @@ function formTelefono(string $idNumero, string $label, array $opts = []): void {
     $required  = !empty($opts['required']);
     $reqMark   = $required ? '<span class="req-mark" aria-hidden="true">*</span>' : '';
 
-    // Separa prefisso dal numero (se già salvato come "+39 333-...")
     $savedPrefix = '+39';
     $savedNumber = $fullValue;
     foreach (array_keys($prefissi) as $p) {
@@ -214,8 +190,6 @@ function formTelefono(string $idNumero, string $label, array $opts = []): void {
     echo "<div class=\"form-group fg-{$idNumero}\">\n";
     echo "  <label for=\"{$idNumero}\">{$label}{$reqMark}</label>\n";
     echo "  <div class=\"field-wrap tel-wrap\">\n";
-
-    // Dropdown prefisso
     echo "    <select id=\"tel_prefix\" name=\"tel_prefix\" class=\"form-control tel-prefix\" aria-label=\"" . htmlspecialchars($L['utenti_prefisso_label'] ?? 'Prefisso') . "\">\n";
     foreach ($prefissi as $val => $lbl) {
         $sel = ($val === $savedPrefix) ? 'selected' : '';
@@ -223,7 +197,6 @@ function formTelefono(string $idNumero, string $label, array $opts = []): void {
     }
     echo "    </select>\n";
 
-    // Input numero
     $placeholder = htmlspecialchars($opts['placeholder'] ?? '333-1234567');
     echo <<<HTML
     <input
@@ -240,9 +213,7 @@ function formTelefono(string $idNumero, string $label, array $opts = []): void {
   </div>
 HTML;
 
-    // Input hidden che viene aggiornato via JS al submit
     echo "  <input type=\"hidden\" id=\"{$idNumero}_full\" name=\"telefono\" value=\"" . htmlspecialchars($fullValue) . "\">\n";
-
     if ($hint) {
         echo "  <div class=\"field-hint\">{$hint}</div>\n";
     }
@@ -251,7 +222,7 @@ HTML;
 }
 
 /* ============================================================
-   FIELD — SLOT ORARIO (select con mezze ore dalle 07:30 alle 20:00)
+   FIELD — SLOT ORARIO
    ============================================================ */
 function formOrario(string $id, string $label, array $opts = []): void {
     $selected = $opts['value'] ?? '';
@@ -262,27 +233,24 @@ function formOrario(string $id, string $label, array $opts = []): void {
     $reqMark  = $required ? '<span class="req-mark" aria-hidden="true">*</span>' : '';
     $reqAttr  = $required ? 'required' : '';
 
-    // Genera slot ogni 5 minuti 07:30 → 20:00
-    $slots    = [];
-    $start    = strtotime('07:30');
-    $end      = strtotime('20:00');
+    $slots = [];
+    $start = strtotime('07:30');
+    $end   = strtotime('20:00');
     for ($t = $start; $t <= $end; $t += 5 * 60) {
         $slots[] = date('H:i', $t);
     }
 
     echo "<div class=\"form-group fg-{$id}\">\n";
     echo "  <label for=\"{$id}\">{$label}{$reqMark}</label>\n";
-    echo "  <div class=\"field-wrap field-wrap--orario\">\n";
+    echo "  <div class=\"field-wrap field-wrap--select field-wrap--orario\">\n";
     echo "    <select id=\"{$id}\" name=\"{$id}\" class=\"form-control\" {$reqAttr} {$extra}>\n";
     echo "      <option value=\"\">-- Seleziona orario --</option>\n";
-
     foreach ($slots as $slot) {
         $sel = ($slot === substr($selected, 0, 5)) ? 'selected' : '';
         echo "      <option value=\"{$slot}\" {$sel}>{$slot}</option>\n";
     }
-
     echo "    </select>\n";
-    echo "    <span class=\"field-status\" aria-hidden=\"true\"></span>\n";
+    /* Nessuna .field-status: la freccia nativa del select occupa lo spazio */
     echo "  </div>\n";
 
     if ($hint) {
@@ -293,7 +261,7 @@ function formOrario(string $id, string $label, array $opts = []): void {
 }
 
 /* ============================================================
-   FIELD — CHECKBOX con label inline
+   FIELD — CHECKBOX
    ============================================================ */
 function formCheckbox(string $id, string $label, bool $checked = false, array $opts = []): void {
     $value = $opts['value'] ?? '1';
@@ -313,7 +281,6 @@ HTML;
 
 /* ============================================================
    CSS aggiuntivo per controlli contestuali
-   Da includere con <style> in header o file CSS.
    ============================================================ */
 function formFieldStyles(): void { ?>
 <style>
@@ -323,13 +290,20 @@ function formFieldStyles(): void { ?>
     display: flex;
     align-items: center;
 }
-.field-wrap .form-control {
+/* Input/textarea: padding-right per icona stato */
+.field-wrap .form-control:not(select) {
     flex: 1;
-    padding-right: 36px; /* spazio per icona stato */
+    padding-right: 36px;
+}
+/* Select: nessun padding extra a destra, la freccia nativa usa quello spazio.
+   L'icona .field-status NON viene emessa nei select (vedi formSelect). */
+.field-wrap--select .form-control {
+    flex: 1;
+    padding-right: 12px; /* reset al default */
 }
 textarea.form-control { padding-right: 12px; }
 
-/* ---- Icona stato ---- */
+/* ---- Icona stato (input, non select) ---- */
 .field-status {
     position: absolute;
     right: 10px;
@@ -386,9 +360,6 @@ textarea.form-control { padding-right: 12px; }
     .tel-number { flex: 0 0 100%; }
 }
 
-/* ---- Select orario ---- */
-.field-wrap--orario .form-control { padding-right: 36px; }
-
 /* ---- Checkbox custom ---- */
 .form-group--check { margin-bottom: 16px; }
 .check-label {
@@ -427,12 +398,10 @@ textarea.form-control { padding-right: 12px; }
 
 /* ============================================================
    JS per validazione live + counter + telefono
-   Da includere prima di </body> o inline nel form.
    ============================================================ */
 function formFieldScripts(): void { ?>
 <script>
 (function () {
-    /* ---------- Utility ---------- */
     function showErr(inputEl, errId, msg) {
         const e = document.getElementById(errId);
         if (!e) return;
@@ -452,7 +421,7 @@ function formFieldScripts(): void { ?>
     window.formShowErr  = showErr;
     window.formClearErr = clearErr;
 
-    /* ---------- Contatori caratteri ---------- */
+    /* Contatori caratteri */
     document.querySelectorAll('[data-counter]').forEach(function (cnt) {
         const target = document.getElementById(cnt.dataset.counter);
         const max    = parseInt(cnt.dataset.max);
@@ -467,7 +436,7 @@ function formFieldScripts(): void { ?>
         update();
     });
 
-    /* ---------- Telefono: unisci prefisso+numero in hidden ---------- */
+    /* Telefono: unisci prefisso+numero in hidden */
     document.querySelectorAll('.tel-wrap').forEach(function (wrap) {
         const prefix = wrap.querySelector('.tel-prefix');
         const number = wrap.querySelector('.tel-number');
@@ -480,10 +449,10 @@ function formFieldScripts(): void { ?>
         }
         prefix.addEventListener('change', combine);
         number.addEventListener('input',  combine);
-        combine(); // init
+        combine();
     });
 
-    /* ---------- Validazione live su blur ---------- */
+    /* Validazione live su blur */
     document.querySelectorAll('.form-control[required]').forEach(function (el) {
         el.addEventListener('blur', function () {
             const errId = 'err_' + el.id;
@@ -495,7 +464,7 @@ function formFieldScripts(): void { ?>
         });
     });
 
-    /* ---------- Validazione email live ---------- */
+    /* Email live */
     document.querySelectorAll('input[type=email]').forEach(function (el) {
         el.addEventListener('blur', function () {
             const errId = 'err_' + el.id;
@@ -508,46 +477,7 @@ function formFieldScripts(): void { ?>
         });
     });
 
-    /* ---------- Testo-uppercase per nome classe ---------- */
-    const nomeClasse = document.getElementById('nome');
-    if (nomeClasse && nomeClasse.closest('.fg-nome')) {
-        nomeClasse.addEventListener('input', function () {
-            const pos = this.selectionStart;
-            this.value = this.value.toUpperCase();
-            this.setSelectionRange(pos, pos);
-        });
-    }
-
-    /* ---------- Forza password ---------- */
-    const pwdInput = document.getElementById('password') || document.getElementById('new_password');
-    const pwdBar   = document.getElementById('pwdBar');
-    const pwdLabel = document.getElementById('pwdLabel');
-    const pwdWrap  = document.getElementById('pwdStrength');
-    if (pwdInput && pwdBar && pwdWrap) {
-        const levels = [
-            { w:'20%',  bg:'var(--danger)',  l:'Molto debole' },
-            { w:'40%',  bg:'var(--warning)', l:'Debole' },
-            { w:'60%',  bg:'#f59e0b',        l:'Accettabile' },
-            { w:'80%',  bg:'var(--info)',     l:'Forte' },
-            { w:'100%', bg:'var(--success)',  l:'Molto forte' },
-        ];
-        pwdInput.addEventListener('input', function () {
-            const v = pwdInput.value;
-            pwdWrap.style.display = v ? 'block' : 'none';
-            let score = 0;
-            if (v.length >= 6)         score++;
-            if (v.length >= 10)        score++;
-            if (/[A-Z]/.test(v))       score++;
-            if (/[0-9]/.test(v))       score++;
-            if (/[^A-Za-z0-9]/.test(v))score++;
-            const lv = levels[Math.max(0, score - 1)];
-            pwdBar.style.width      = lv.w;
-            pwdBar.style.background = lv.bg;
-            if (pwdLabel) { pwdLabel.textContent = lv.l; pwdLabel.style.color = lv.bg; }
-        });
-    }
-
-    /* ---------- Ora uscita > ingresso ---------- */
+    /* Ora uscita > ingresso */
     const oraI = document.getElementById('ora_ingresso');
     const oraU = document.getElementById('ora_uscita');
     if (oraI && oraU) {
@@ -562,7 +492,7 @@ function formFieldScripts(): void { ?>
         oraU.addEventListener('change', checkOre);
     }
 
-    /* ---------- Sync docenti (titolare ≠ compresenza) ---------- */
+    /* Sync docenti (titolare ≠ compresenza) */
     const selTit  = document.getElementById('docente_titolare');
     const selComp = document.getElementById('docente_compresenza');
     if (selTit && selComp) {
@@ -577,7 +507,7 @@ function formFieldScripts(): void { ?>
         syncDocenti();
     }
 
-    /* ---------- Soglia vs quantità materiale ---------- */
+    /* Soglia vs quantità materiale */
     const qEl = document.getElementById('quantita_disponibile');
     const sEl = document.getElementById('soglia_minima');
     if (qEl && sEl) {
@@ -594,11 +524,50 @@ function formFieldScripts(): void { ?>
         sEl.addEventListener('input', checkQS);
     }
 
-    /* ---------- Mostra/nascondi password ---------- */
+    /* Mostra/nascondi password */
     window.togglePwd = function (inputId) {
         const f = document.getElementById(inputId || 'password');
         if (f) f.type = f.type === 'password' ? 'text' : 'password';
     };
+
+    /* Uppercase nome classe */
+    const nomeClasse = document.getElementById('nome');
+    if (nomeClasse && nomeClasse.closest('.fg-nome')) {
+        nomeClasse.addEventListener('input', function () {
+            const pos = this.selectionStart;
+            this.value = this.value.toUpperCase();
+            this.setSelectionRange(pos, pos);
+        });
+    }
+
+    /* Indicatore forza password */
+    const pwdInput = document.getElementById('password') || document.getElementById('new_password');
+    const pwdBar   = document.getElementById('pwdBar');
+    const pwdLabel = document.getElementById('pwdLabel');
+    const pwdWrap  = document.getElementById('pwdStrength');
+    if (pwdInput && pwdBar && pwdWrap) {
+        const levels = [
+            { w:'20%',  bg:'var(--danger)',  l:'Molto debole' },
+            { w:'40%',  bg:'var(--warning)', l:'Debole' },
+            { w:'60%',  bg:'#f59e0b',        l:'Accettabile' },
+            { w:'80%',  bg:'var(--info)',     l:'Forte' },
+            { w:'100%', bg:'var(--success)',  l:'Molto forte' },
+        ];
+        pwdInput.addEventListener('input', function () {
+            const v = pwdInput.value;
+            pwdWrap.style.display = v ? 'block' : 'none';
+            let score = 0;
+            if (v.length >= 6)          score++;
+            if (v.length >= 10)         score++;
+            if (/[A-Z]/.test(v))        score++;
+            if (/[0-9]/.test(v))        score++;
+            if (/[^A-Za-z0-9]/.test(v)) score++;
+            const lv = levels[Math.max(0, score - 1)];
+            pwdBar.style.width      = lv.w;
+            pwdBar.style.background = lv.bg;
+            if (pwdLabel) { pwdLabel.textContent = lv.l; pwdLabel.style.color = lv.bg; }
+        });
+    }
 
 })();
 </script>
