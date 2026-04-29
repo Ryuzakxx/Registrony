@@ -8,12 +8,17 @@ requireAdmin();
 $conn = getConnection();
 $L    = lang();
 
+// Capitalizza ogni parola mantenendo le accentate (es. "maria grazia" → "Maria Grazia")
+function capitalizzaNome(string $s): string {
+    return mb_convert_case(mb_strtolower(trim($s), 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'crea') {
-        $nome     = trim($_POST['nome']     ?? '');
-        $cognome  = trim($_POST['cognome']  ?? '');
+        $nome     = capitalizzaNome($_POST['nome']    ?? '');
+        $cognome  = capitalizzaNome($_POST['cognome'] ?? '');
         $email    = trim($_POST['email']    ?? '');
         $password = $_POST['password']      ?? '';
         $ruolo    = in_array($_POST['ruolo'] ?? '', ['admin','docente']) ? $_POST['ruolo'] : 'docente';
@@ -44,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'modifica') {
         $id       = intval($_POST['id']      ?? 0);
-        $nome     = trim($_POST['nome']      ?? '');
-        $cognome  = trim($_POST['cognome']   ?? '');
+        $nome     = capitalizzaNome($_POST['nome']    ?? '');
+        $cognome  = capitalizzaNome($_POST['cognome'] ?? '');
         $email    = trim($_POST['email']     ?? '');
         $ruolo    = in_array($_POST['ruolo'] ?? '', ['admin','docente']) ? $_POST['ruolo'] : 'docente';
         $telefono = trim($_POST['telefono']  ?? '');
@@ -132,12 +137,14 @@ $isEdit = $editUser !== null;
                     'required'     => true,
                     'max'          => 100,
                     'autocomplete' => 'given-name',
+                    'extra'        => 'autocapitalize="words"',
                 ]);
                 formField('cognome', $L['utenti_cognome'], [
                     'value'        => $editUser['cognome'] ?? '',
                     'required'     => true,
                     'max'          => 100,
                     'autocomplete' => 'family-name',
+                    'extra'        => 'autocapitalize="words"',
                 ]);
                 ?>
             </div>
@@ -287,6 +294,25 @@ $isEdit = $editUser !== null;
 <?php formFieldScripts(); ?>
 
 <script>
+/* Auto-capitalizza mentre si scrive: "mario" → "Mario", "maria grazia" → "Maria Grazia" */
+(function () {
+    function titleCase(str) {
+        return str.replace(/\b(\w)/g, function(ch) { return ch.toUpperCase(); });
+    }
+    ['nome', 'cognome'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', function() {
+            const pos = el.selectionStart;
+            el.value = titleCase(el.value);
+            el.setSelectionRange(pos, pos);
+        });
+        el.addEventListener('blur', function() {
+            el.value = titleCase(el.value.trim());
+        });
+    });
+})();
+
 (function () {
     const form = document.getElementById('formUtente');
     if (!form) return;
