@@ -86,14 +86,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'elimina') {
         $id = intval($_POST['id'] ?? 0);
-        if ($id != getCurrentUserId()) {
-            // Prima rimuovi il riferimento FK nei laboratori di cui è responsabile
-            mysqli_query($conn, "UPDATE laboratori SET id_responsabile = NULL WHERE id_responsabile = $id");
-            mysqli_query($conn, "DELETE FROM utenti WHERE id = $id");
-            header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?success=' . urlencode($L['utenti_ok_eliminato']));
-        } else {
+        if ($id == getCurrentUserId()) {
             header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?error=' . urlencode($L['utenti_err_no_self']));
+            exit;
         }
+
+        // Controlla se l'utente è responsabile di qualche laboratorio
+        $resLab = mysqli_query($conn, "SELECT nome FROM laboratori WHERE id_responsabile = $id");
+        if (mysqli_num_rows($resLab) > 0) {
+            $nomiLab = [];
+            while ($row = mysqli_fetch_assoc($resLab)) $nomiLab[] = $row['nome'];
+            $errMsg = 'Impossibile eliminare: l\'utente è responsabile dei laboratori: ' . implode(', ', $nomiLab) . '. Riassegna prima il responsabile.';
+            header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?error=' . urlencode($errMsg));
+            exit;
+        }
+
+        mysqli_query($conn, "DELETE FROM utenti WHERE id = $id");
+        header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?success=' . urlencode($L['utenti_ok_eliminato']));
         exit;
     }
 }
