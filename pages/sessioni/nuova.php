@@ -1,15 +1,14 @@
 <?php
 /* ================================================================
-   Logica POST prima di qualsiasi output HTML
+   POST logic before any HTML output
    ================================================================ */
 require_once __DIR__ . '/../../config/auth.php';
 requireLogin();
 require_once __DIR__ . '/../../config/app.php';
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../lang/it.php';
 
 $conn   = getConnection();
-$L      = lang();
+$L      = lang(); // reads locale from session automatically
 $errors = [];
 
 $resLabs    = mysqli_query($conn, "SELECT id, nome, aula FROM laboratori WHERE attivo = 1 ORDER BY nome");
@@ -24,6 +23,10 @@ $resDocenti = mysqli_query($conn, "SELECT id, nome, cognome FROM utenti WHERE at
 $docenti    = [];
 while ($row = mysqli_fetch_assoc($resDocenti)) $docenti[] = $row;
 
+// Current server date and time (used for validation)
+$today   = date('Y-m-d');
+$nowTime = date('H:i');
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $idLab              = intval($_POST['id_laboratorio']      ?? 0);
     $idClasse           = intval($_POST['id_classe']           ?? 0);
@@ -34,14 +37,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $note               = trim($_POST['note']                  ?? '');
     $docenteTitolare    = intval($_POST['docente_titolare']    ?? 0);
     $docenteCompresenza = intval($_POST['docente_compresenza'] ?? 0);
-    $materialiUsati     = array_map('intval', $_POST['materiali_usati'] ?? []);
 
-    if (!$idLab)       $errors[] = $L['sess_err_lab'];
-    if (!$idClasse)    $errors[] = $L['sess_err_classe'];
-    if (!$data)        $errors[] = $L['sess_err_data'];
-    if ($data && $data > date('Y-m-d')) $errors[] = $L['sess_err_data_futura'];
-    if (!$oraIngresso) $errors[] = $L['sess_err_ora_ingresso'];
-    if ($oraUscita && $oraUscita <= $oraIngresso) $errors[] = $L['sess_err_ora_uscita'];
+    // --- Validation ---
+    if (!$idLab)    $errors[] = $L['sess_err_lab'];
+    if (!$idClasse) $errors[] = $L['sess_err_classe'];
+
+    // Date: required, cannot be in the future
+    if (!$data) {
+        $errors[] = $L['sess_err_data'];
+    } elseif ($data > $today) {
+        $errors[] = $L['sess_err_data_futura'];
+    }
+
+    // Entry time: required; if today, cannot be in the future
+    if (!$oraIngresso) {
+        $errors[] = $L['sess_err_ora_ingresso'];
+    } elseif ($data === $today && $oraIngresso > $nowTime) {
+        $errors[] = $L['sess_err_ora_ingresso_futura'] ?? ($L['sess_err_ora_ingresso'] . ' (future)');
+    }
+
+    // Exit time: optional; if provided must be after entry AND not in the future when today
+    if ($oraUscita) {
+        if ($oraUscita <= $oraIngresso) {
+            $errors[] = $L['sess_err_ora_uscita'];
+        } elseif ($data === $today && $oraUscita > $nowTime) {
+            $errors[] = $L['sess_err_ora_uscita_futura'] ?? ($L['sess_err_ora_uscita'] . ' (future)');
+        }
+    }
+
     if (!$docenteTitolare) $errors[] = $L['sess_err_docente_tit'];
     if ($docenteCompresenza && $docenteCompresenza === $docenteTitolare) $errors[] = $L['sess_err_docente_comp'];
     if (strlen($attivita) > 1000) $errors[] = $L['sess_err_attivita_lunga'];
@@ -64,19 +87,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 mysqli_query($conn, "INSERT INTO firme_sessioni (id_sessione, id_docente, tipo_presenza) VALUES ($sessId, $docenteCompresenza, 'compresenza')");
             }
 
-            /*
-             * Nota: nella nuova sessione registriamo solo "quali materiali sono stati usati"
-             * senza specificare la quantita. La quantita esatta si inserisce nel dettaglio.
-             * Il checkbox serve come promemoria rapido; la deduzione della quantita avviene
-             * nella pagina dettaglio con il form dedicato.
-             */
-
             mysqli_commit($conn);
             header('Location: ' . BASE_PATH . '/pages/sessioni/dettaglio.php?id=' . $sessId . '&success=' . urlencode($L['sess_ok_creata']));
             exit;
         } catch (Exception $ex) {
             mysqli_rollback($conn);
-            $errors[] = 'Errore database: ' . $ex->getMessage();
+            $errors[] = 'Database error: ' . $ex->getMessage();
         }
     }
 }
@@ -84,8 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $currentUserId = getCurrentUserId();
 
 /* ================================================================
-   Carica i materiali per ogni laboratorio in formato JSON
-   (usato dal JS per filtrare dinamicamente)
+   Load materials per lab as JSON for dynamic JS filtering
    ================================================================ */
 $resMat = mysqli_query($conn, "
     SELECT m.id, m.nome, m.unita_misura, m.quantita_disponibile, m.id_laboratorio
@@ -99,13 +114,13 @@ while ($row = mysqli_fetch_assoc($resMat)) {
 }
 
 /* ================================================================
-   Include header.php SOLO dopo tutti i possibili redirect
+   Include header ONLY after all possible redirects
    ================================================================ */
-$pageTitle = 'Nuova Sessione';
+$pageTitle = $L['sess_titolo_nuova'];
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/form_helpers.php';
 
-/* Mappe select */
+/* Select maps */
 $labsMap = ['' => $L['sess_seleziona_lab']];
 foreach ($labs as $lab) {
     $labsMap[$lab['id']] = $lab['nome'] . ' (' . $lab['aula'] . ')';
@@ -145,7 +160,7 @@ foreach ($docenti as $doc) {
                 <?php if (empty($labs)): ?>
                     <div class="alert alert-warning">
                         <?= htmlspecialchars($L['sess_nessun_lab']) ?>
-                        <a href="<?= BASE_PATH ?>/pages/admin/laboratori.php">Creane uno</a>.
+                        <a href="<?= BASE_PATH ?>/pages/admin/laboratori.php"><?= $L['crea'] ?></a>.
                     </div>
                 <?php else: ?>
                     <?php formSelect('id_laboratorio', $L['sess_laboratorio'], $labsMap, [
@@ -158,7 +173,7 @@ foreach ($docenti as $doc) {
                 <?php if (empty($classi)): ?>
                     <div class="alert alert-warning">
                         <?= htmlspecialchars($L['sess_nessuna_classe']) ?>
-                        <a href="<?= BASE_PATH ?>/pages/admin/classi.php">Creane una</a>.
+                        <a href="<?= BASE_PATH ?>/pages/admin/classi.php"><?= $L['crea'] ?></a>.
                     </div>
                 <?php else: ?>
                     <?php formSelect('id_classe', $L['sess_classe'], $classiMap, [
@@ -172,12 +187,12 @@ foreach ($docenti as $doc) {
                 <?php
                 formField('data', $L['sess_data'], [
                     'type'     => 'date',
-                    'value'    => $_POST['data'] ?? date('Y-m-d'),
+                    'value'    => $_POST['data'] ?? $today,
                     'required' => true,
-                    'extra'    => 'max="' . date('Y-m-d') . '"',
+                    'extra'    => 'max="' . $today . '" id="fldData"',
                 ]);
                 formOrario('ora_ingresso', $L['sess_ora_ingresso'], [
-                    'value'    => $_POST['ora_ingresso'] ?? date('H:i'),
+                    'value'    => $_POST['ora_ingresso'] ?? $nowTime,
                     'required' => true,
                 ]);
                 formOrario('ora_uscita', $L['sess_ora_uscita'], [
@@ -195,7 +210,7 @@ foreach ($docenti as $doc) {
                 ]);
                 formSelect('docente_compresenza', $L['sess_docente_compresenza'], $docentiCompMap, [
                     'selected' => (string)($_POST['docente_compresenza'] ?? ''),
-                    'hint'     => $L['nessuno'] . ' = nessuna compresenza',
+                    'hint'     => $L['nessuno'] . ' = no co-presence',
                 ]);
                 ?>
             </div>
@@ -230,7 +245,7 @@ foreach ($docenti as $doc) {
             </div>
 
             <p class="form-text" style="margin-top:8px;">
-                Dopo aver creato la sessione potrai aggiungere i materiali utilizzati con le relative quantita dalla pagina di dettaglio.
+                <?= $L['sess_hint_ora_uscita'] ?>
             </p>
         </form>
     </div>
@@ -239,19 +254,22 @@ foreach ($docenti as $doc) {
 <?php formFieldScripts(); ?>
 
 <script>
-/* Validazione form */
+/* Client-side validation — mirrors PHP checks */
 (function () {
-    const form   = document.getElementById('formNuovaSessione');
-    const today  = '<?= date('Y-m-d') ?>';
+    const form    = document.getElementById('formNuovaSessione');
+    const today   = <?= json_encode($today) ?>;
+    const nowTime = <?= json_encode($nowTime) ?>;
     if (!form) return;
 
     form.addEventListener('submit', function (e) {
         let valid = true;
+
+        // Required selects
         const checks = [
-            { id: 'id_laboratorio',   msg: <?= json_encode($L['sess_err_lab']) ?>,          check: v => !!v },
-            { id: 'id_classe',        msg: <?= json_encode($L['sess_err_classe']) ?>,        check: v => !!v },
-            { id: 'ora_ingresso',     msg: <?= json_encode($L['sess_err_ora_ingresso']) ?>,  check: v => !!v },
-            { id: 'docente_titolare', msg: <?= json_encode($L['sess_err_docente_tit']) ?>,   check: v => !!v },
+            { id: 'id_laboratorio',   msg: <?= json_encode($L['sess_err_lab']) ?>,         check: v => !!v },
+            { id: 'id_classe',        msg: <?= json_encode($L['sess_err_classe']) ?>,       check: v => !!v },
+            { id: 'ora_ingresso',     msg: <?= json_encode($L['sess_err_ora_ingresso']) ?>, check: v => !!v },
+            { id: 'docente_titolare', msg: <?= json_encode($L['sess_err_docente_tit']) ?>,  check: v => !!v },
         ];
         checks.forEach(function (c) {
             const el = document.getElementById(c.id);
@@ -259,28 +277,50 @@ foreach ($docenti as $doc) {
             if (!c.check(el.value.trim())) { formShowErr(el, 'err_' + c.id, c.msg); valid = false; }
             else formClearErr(el, 'err_' + c.id);
         });
-        const dataEl = document.getElementById('data');
+
+        // Date: required, not in the future
+        const dataEl = document.getElementById('fldData') || document.getElementById('data');
+        let selectedDate = '';
         if (dataEl) {
-            if (!dataEl.value) {
+            selectedDate = dataEl.value;
+            if (!selectedDate) {
                 formShowErr(dataEl, 'err_data', <?= json_encode($L['sess_err_data']) ?>); valid = false;
-            } else if (dataEl.value > today) {
+            } else if (selectedDate > today) {
                 formShowErr(dataEl, 'err_data', <?= json_encode($L['sess_err_data_futura']) ?>); valid = false;
             } else {
                 formClearErr(dataEl, 'err_data');
             }
         }
+
+        // Entry time: not in the future if today
         const oraI = document.getElementById('ora_ingresso');
-        const oraU = document.getElementById('ora_uscita');
-        if (oraI && oraU && oraU.value && oraU.value <= oraI.value) {
-            formShowErr(oraU, 'err_ora_uscita', <?= json_encode($L['sess_err_ora_uscita']) ?>);
+        if (oraI && oraI.value && selectedDate === today && oraI.value > nowTime) {
+            formShowErr(oraI, 'err_ora_ingresso', <?= json_encode($L['sess_err_ora_ingresso_futura'] ?? $L['sess_err_ora_ingresso']) ?>);
             valid = false;
         }
+
+        // Exit time: must be after entry AND not in the future if today
+        const oraU = document.getElementById('ora_uscita');
+        if (oraI && oraU && oraU.value) {
+            if (oraU.value <= oraI.value) {
+                formShowErr(oraU, 'err_ora_uscita', <?= json_encode($L['sess_err_ora_uscita']) ?>);
+                valid = false;
+            } else if (selectedDate === today && oraU.value > nowTime) {
+                formShowErr(oraU, 'err_ora_uscita', <?= json_encode($L['sess_err_ora_uscita_futura'] ?? $L['sess_err_ora_uscita']) ?>);
+                valid = false;
+            } else {
+                formClearErr(oraU, 'err_ora_uscita');
+            }
+        }
+
+        // Co-present teacher must differ from lead
         const dt = document.getElementById('docente_titolare');
         const dc = document.getElementById('docente_compresenza');
         if (dt && dc && dc.value && dc.value === dt.value) {
             formShowErr(dc, 'err_docente_compresenza', <?= json_encode($L['sess_err_docente_comp']) ?>);
             valid = false;
         }
+
         if (!valid) e.preventDefault();
     });
 })();

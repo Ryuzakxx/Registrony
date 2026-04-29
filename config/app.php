@@ -1,11 +1,11 @@
 <?php
 /**
- * Configurazione App
- * BASE_PATH viene rilevato automaticamente dal percorso della cartella.
- * Funziona con qualsiasi nome di cartella (registrony, registrony-laboratorio, ecc.)
+ * App Configuration
+ * BASE_PATH is auto-detected from the folder path relative to document root.
+ * Works with any folder name (registrony, registrony-laboratorio, etc.)
  */
 
-// Auto-detect: trova la cartella root del progetto rispetto alla document root
+// Auto-detect: find the project root relative to the document root
 $_appRoot = str_replace('\\', '/', dirname(__DIR__));
 $_docRoot = str_replace('\\', '/', rtrim($_SERVER['DOCUMENT_ROOT'] ?? '', '/\\'));
 
@@ -18,27 +18,49 @@ if ($_docRoot && strpos($_appRoot, $_docRoot) === 0) {
 unset($_appRoot, $_docRoot);
 
 /**
- * Carica le etichette UI dalla lingua specificata.
- * Uso: $L = lang();  poi $L['chiave']
+ * Returns the current UI locale code.
+ * Priority: $_SESSION['lang'] > 'it' (default)
  *
- * @param string $lang  Codice lingua (default: 'it')
+ * @return string  e.g. 'it' | 'en'
+ */
+function currentLang(): string {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    $allowed = ['it', 'en'];
+    $lang    = $_SESSION['lang'] ?? 'it';
+    return in_array($lang, $allowed, true) ? $lang : 'it';
+}
+
+/**
+ * Loads UI labels for the given language.
+ * Falls back to Italian if the file does not exist.
+ * Usage: $L = lang();  then $L['key']
+ *
+ * @param string|null $lang  Language code; null = read from session
  * @return array
  */
-function lang(string $lang = 'it'): array {
+function lang(?string $lang = null): array {
     static $cache = [];
+    if ($lang === null) {
+        $lang = currentLang();
+    }
     if (!isset($cache[$lang])) {
         $file = __DIR__ . '/../lang/' . $lang . '.php';
+        if (!file_exists($file)) {
+            $file = __DIR__ . '/../lang/it.php'; // fallback
+        }
         $cache[$lang] = file_exists($file) ? (require $file) : [];
     }
     return $cache[$lang];
 }
 
 /**
- * Shortcut per ottenere una singola label.
- * Uso: L('chiave')  oppure  L('chiave', 'Fallback')
+ * Shortcut to get a single label.
+ * Usage: L('key')  or  L('key', 'Fallback')
  *
  * @param string $key
- * @param string $fallback  Valore se la chiave non esiste
+ * @param string $fallback  Value if the key does not exist
  * @return string
  */
 function L(string $key, string $fallback = ''): string {
