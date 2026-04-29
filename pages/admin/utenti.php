@@ -1,15 +1,14 @@
 <?php
-$pageTitle = 'Gestione Utenti';
-require_once __DIR__ . '/../../includes/header.php';
-require_once __DIR__ . '/../../includes/form_helpers.php';
+/* ================================================================
+   ACTIONS — devono stare PRIMA di qualsiasi output (header.php)
+   ================================================================ */
+require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
 
 $conn = getConnection();
 $L    = lang();
 
-/* ================================================================
-   ACTIONS
-   ================================================================ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -19,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email    = trim($_POST['email']    ?? '');
         $password = $_POST['password']      ?? '';
         $ruolo    = in_array($_POST['ruolo'] ?? '', ['admin','docente']) ? $_POST['ruolo'] : 'docente';
-        $telefono = trim($_POST['telefono'] ?? '');   // già unito da JS (prefisso + numero)
+        $telefono = trim($_POST['telefono'] ?? '');
         $errors   = [];
 
         if (!$nome)                                                  $errors[] = $L['utenti_err_nome'];
@@ -94,8 +93,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* ================================================================
-   READ
+   READ — dopo il redirect, qui l'HTML può iniziare
    ================================================================ */
+$pageTitle = 'Gestione Utenti';
+require_once __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/form_helpers.php';
+
 $result = mysqli_query($conn, "SELECT * FROM utenti ORDER BY cognome, nome");
 $utenti = [];
 while ($row = mysqli_fetch_assoc($result)) $utenti[] = $row;
@@ -155,7 +158,6 @@ $isEdit = $editUser !== null;
                 ]);
                 ?>
 
-                <!-- Password con toggle visibilità e indicatore forza -->
                 <div class="form-group fg-password">
                     <label for="<?= $isEdit ? 'new_password' : 'password' ?>">
                         <?= htmlspecialchars($isEdit ? $L['utenti_pwd_nuova_label'] : $L['utenti_pwd_label']) ?>
@@ -183,7 +185,7 @@ $isEdit = $editUser !== null;
                             class="pwd-toggle-btn"
                             title="Mostra/nascondi password"
                             aria-label="Mostra o nascondi password"
-                        >👁</button>
+                        >&#128065;</button>
                         <span class="field-status" aria-hidden="true"></span>
                     </div>
                     <?php if (!$isEdit): ?>
@@ -209,7 +211,6 @@ $isEdit = $editUser !== null;
                     'required' => true,
                 ]);
 
-                // Campo telefono con dropdown prefisso internazionale
                 formTelefono('tel_numero', $L['utenti_telefono'], [
                     'value'       => $editUser['telefono'] ?? '',
                     'placeholder' => $L['utenti_telefono_placeholder'],
@@ -239,11 +240,11 @@ $isEdit = $editUser !== null;
      ============================================================ -->
 <div class="card">
     <div class="card-header">
-        <h3>👥 <?= htmlspecialchars($L['utenti_titolo']) ?> (<?= count($utenti) ?>)</h3>
+        <h3><?= htmlspecialchars($L['utenti_titolo']) ?> (<?= count($utenti) ?>)</h3>
     </div>
     <div class="card-body">
         <?php if (empty($utenti)): ?>
-            <div class="empty-state"><div class="empty-icon">👥</div><h4><?= htmlspecialchars($L['utenti_nessuno']) ?></h4></div>
+            <div class="empty-state"><div class="empty-icon"></div><h4><?= htmlspecialchars($L['utenti_nessuno']) ?></h4></div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
@@ -264,7 +265,7 @@ $isEdit = $editUser !== null;
                             <td><?= htmlspecialchars($u['email']) ?></td>
                             <td>
                                 <span class="badge <?= $u['ruolo'] === 'admin' ? 'badge-primary' : 'badge-secondary' ?>">
-                                    <?= $u['ruolo'] === 'admin' ? '⚙ Admin' : '📋 Docente' ?>
+                                    <?= $u['ruolo'] === 'admin' ? 'Admin' : 'Docente' ?>
                                 </span>
                             </td>
                             <td><?= htmlspecialchars($u['telefono'] ?? '-') ?></td>
@@ -274,13 +275,13 @@ $isEdit = $editUser !== null;
                                 </span>
                             </td>
                             <td class="actions">
-                                <a href="?edit=<?= $u['id'] ?>" class="btn btn-primary btn-sm">✏ <?= htmlspecialchars($L['modifica']) ?></a>
+                                <a href="?edit=<?= $u['id'] ?>" class="btn btn-primary btn-sm"><?= htmlspecialchars($L['modifica']) ?></a>
                                 <?php if ($u['id'] != getCurrentUserId()): ?>
                                     <form method="POST" style="display:inline"
                                           onsubmit="return confirm(<?= json_encode(sprintf($L['confirm_elimina_utente'], $u['cognome'] . ' ' . $u['nome'])) ?>)">
                                         <input type="hidden" name="action" value="elimina">
                                         <input type="hidden" name="id" value="<?= $u['id'] ?>">
-                                        <button type="submit" class="btn btn-danger btn-sm">🗑 <?= htmlspecialchars($L['elimina']) ?></button>
+                                        <button type="submit" class="btn btn-danger btn-sm"><?= htmlspecialchars($L['elimina']) ?></button>
                                     </form>
                                 <?php endif; ?>
                             </td>
@@ -313,7 +314,6 @@ $isEdit = $editUser !== null;
 <?php formFieldScripts(); ?>
 
 <script>
-/* Validazione submit utenti */
 (function () {
     const form = document.getElementById('formUtente');
     if (!form) return;
@@ -332,7 +332,6 @@ $isEdit = $editUser !== null;
             else formClearErr(el, 'err_' + c.id);
         });
 
-        /* Password */
         const isEdit = !!document.querySelector('input[name=new_password]');
         const pwdEl  = document.getElementById(isEdit ? 'new_password' : 'password');
         if (pwdEl) {
@@ -345,7 +344,6 @@ $isEdit = $editUser !== null;
             }
         }
 
-        /* Telefono: usa valore hidden già assemblato */
         const telHidden = document.getElementById('tel_numero_full');
         if (telHidden && telHidden.value) {
             const re = /^[0-9\s\+\-\.()]{7,25}$/;

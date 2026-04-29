@@ -1,6 +1,9 @@
 <?php
-$pageTitle = 'Gestione Laboratori';
-require_once __DIR__ . '/../../includes/header.php';
+/* ================================================================
+   ACTIONS — devono stare PRIMA di qualsiasi output (header.php)
+   ================================================================ */
+require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
 
 $conn = getConnection();
@@ -41,6 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+/* ================================================================
+   READ — dopo il redirect, qui l'HTML può iniziare
+   ================================================================ */
+$pageTitle = 'Gestione Laboratori';
+require_once __DIR__ . '/../../includes/header.php';
+
 $result = mysqli_query($conn, "SELECT l.*, CONCAT(a.cognome,' ',a.nome) AS assistente, CONCAT(r.cognome,' ',r.nome) AS responsabile FROM laboratori l JOIN utenti a ON l.id_assistente_tecnico=a.id JOIN utenti r ON l.id_responsabile=r.id ORDER BY l.nome");
 $labs   = [];
 while ($row = mysqli_fetch_assoc($result)) $labs[] = $row;
@@ -58,7 +67,7 @@ if (isset($_GET['edit'])) {
 ?>
 
 <div class="card">
-    <div class="card-header"><h3><?= $editLab ? '&#9998; Modifica Laboratorio' : '&#10133; Nuovo Laboratorio' ?></h3></div>
+    <div class="card-header"><h3><?= $editLab ? 'Modifica Laboratorio' : 'Nuovo Laboratorio' ?></h3></div>
     <div class="card-body">
         <form method="POST">
             <input type="hidden" name="action" value="<?= $editLab ? 'modifica':'crea' ?>">
@@ -102,7 +111,7 @@ if (isset($_GET['edit'])) {
 </div>
 
 <div class="card">
-    <div class="card-header"><h3>&#128187; Laboratori (<?= count($labs) ?>)</h3></div>
+    <div class="card-header"><h3>Laboratori (<?= count($labs) ?>)</h3></div>
     <div class="card-body">
         <?php if (empty($labs)): ?>
             <div class="empty-state"><h4>Nessun laboratorio</h4></div>
@@ -120,10 +129,10 @@ if (isset($_GET['edit'])) {
                             <td><span class="badge <?= $l['attivo'] ? 'badge-success':'badge-secondary' ?>"><?= $l['attivo'] ? 'Attivo':'Disattivato' ?></span></td>
                             <td class="actions">
                                 <a href="?edit=<?= $l['id'] ?>" class="btn btn-primary btn-sm">Modifica</a>
-                                <form method="POST" style="display:inline">
+                                <form method="POST" style="display:inline" onsubmit="return confirm('Sei sicuro?')">
                                     <input type="hidden" name="action" value="elimina">
                                     <input type="hidden" name="id" value="<?= $l['id'] ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm" data-confirm="Sei sicuro?">Elimina</button>
+                                    <button type="submit" class="btn btn-danger btn-sm">Elimina</button>
                                 </form>
                             </td>
                         </tr>

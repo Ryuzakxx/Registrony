@@ -1,7 +1,9 @@
 <?php
-$pageTitle = 'Gestione Classi';
-require_once __DIR__ . '/../../includes/header.php';
-require_once __DIR__ . '/../../includes/form_helpers.php';
+/* ================================================================
+   ACTIONS — devono stare PRIMA di qualsiasi output (header.php)
+   ================================================================ */
+require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
 
 $conn = getConnection();
@@ -21,9 +23,6 @@ $indirizziPredefiniti = [
 
 $annoCorrente = date('n') >= 9 ? date('Y') . '/' . (date('Y') + 1) : (date('Y') - 1) . '/' . date('Y');
 
-/* ================================================================
-   ACTIONS
-   ================================================================ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -73,8 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* ================================================================
-   READ
+   READ — dopo il redirect, qui l'HTML può iniziare
    ================================================================ */
+$pageTitle = 'Gestione Classi';
+require_once __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/form_helpers.php';
+
 $result = mysqli_query($conn, "SELECT * FROM classi ORDER BY anno_scolastico DESC, nome");
 $classi = [];
 while ($row = mysqli_fetch_assoc($result)) $classi[] = $row;
@@ -88,7 +91,6 @@ if (isset($_GET['edit'])) {
 
 $isEdit = $editClasse !== null;
 
-/* Opzioni anno scolastico */
 $annoBase  = (int)date('Y');
 $anniMap   = ['' => $L['classi_anno_vuoto']];
 for ($y = $annoBase - 2; $y <= $annoBase + 1; $y++) {
@@ -96,12 +98,10 @@ for ($y = $annoBase - 2; $y <= $annoBase + 1; $y++) {
     $anniMap[$opt] = $opt;
 }
 
-/* Opzioni indirizzo */
 $indMap = ['' => $L['classi_indirizzo_vuoto']];
 foreach ($indirizziPredefiniti as $ind) {
     $indMap[$ind] = $ind;
 }
-// Se indirizzo attuale non è in lista, aggiungilo
 $indAttuale = $editClasse['indirizzo'] ?? '';
 if ($indAttuale && !in_array($indAttuale, $indirizziPredefiniti)) {
     $indMap[$indAttuale] = $indAttuale . ' (personalizzato)';
@@ -110,9 +110,6 @@ if ($indAttuale && !in_array($indAttuale, $indirizziPredefiniti)) {
 
 <?php formFieldStyles(); ?>
 
-<!-- ============================================================
-     FORM CREA / MODIFICA
-     ============================================================ -->
 <div class="card">
     <div class="card-header">
         <h3><?= htmlspecialchars($isEdit ? $L['classi_form_titolo_mod'] : $L['classi_form_titolo_crea']) ?></h3>
@@ -163,17 +160,13 @@ if ($indAttuale && !in_array($indAttuale, $indirizziPredefiniti)) {
     </div>
 </div>
 
-<!-- ============================================================
-     LISTA CLASSI
-     ============================================================ -->
 <div class="card">
     <div class="card-header">
-        <h3>🏫 <?= htmlspecialchars($L['classi_titolo']) ?> (<?= count($classi) ?>)</h3>
+        <h3><?= htmlspecialchars($L['classi_titolo']) ?> (<?= count($classi) ?>)</h3>
     </div>
     <div class="card-body">
         <?php if (empty($classi)): ?>
             <div class="empty-state">
-                <div class="empty-icon">🏫</div>
                 <h4><?= htmlspecialchars($L['classi_nessuna']) ?></h4>
             </div>
         <?php else: ?>
@@ -200,12 +193,12 @@ if ($indAttuale && !in_array($indAttuale, $indirizziPredefiniti)) {
                                 </span>
                             </td>
                             <td class="actions">
-                                <a href="?edit=<?= $c['id'] ?>" class="btn btn-primary btn-sm">✏ <?= htmlspecialchars($L['modifica']) ?></a>
+                                <a href="?edit=<?= $c['id'] ?>" class="btn btn-primary btn-sm"><?= htmlspecialchars($L['modifica']) ?></a>
                                 <form method="POST" style="display:inline"
                                       onsubmit="return confirm(<?= json_encode(sprintf($L['confirm_elimina_classe'], $c['nome'])) ?>)">
                                     <input type="hidden" name="action" value="elimina">
                                     <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm">🗑 <?= htmlspecialchars($L['elimina']) ?></button>
+                                    <button type="submit" class="btn btn-danger btn-sm"><?= htmlspecialchars($L['elimina']) ?></button>
                                 </form>
                             </td>
                         </tr>
@@ -220,7 +213,6 @@ if ($indAttuale && !in_array($indAttuale, $indirizziPredefiniti)) {
 <?php formFieldScripts(); ?>
 
 <script>
-/* Validazione submit classi */
 (function () {
     const form = document.getElementById('formClasse');
     if (!form) return;
