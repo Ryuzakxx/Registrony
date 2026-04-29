@@ -87,6 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'elimina') {
         $id = intval($_POST['id'] ?? 0);
         if ($id != getCurrentUserId()) {
+            // Prima rimuovi il riferimento FK nei laboratori di cui è responsabile
+            mysqli_query($conn, "UPDATE laboratori SET id_responsabile = NULL WHERE id_responsabile = $id");
             mysqli_query($conn, "DELETE FROM utenti WHERE id = $id");
             header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?success=' . urlencode($L['utenti_ok_eliminato']));
         } else {
