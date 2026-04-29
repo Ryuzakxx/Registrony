@@ -7,10 +7,31 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
 $nameParts = explode(' ', trim($currentUser['nome_completo']));
 $initials = strtoupper(substr($nameParts[0], 0, 1) . (isset($nameParts[1]) ? substr($nameParts[1], 0, 1) : ''));
 // Language
-$currentLang   = currentLang();
-$otherLang     = $currentLang === 'it' ? 'en' : 'it';
-$otherLangLabel= $currentLang === 'it' ? '🇬🇧 EN' : '🇮🇹 IT';
-$currentUrl    = $_SERVER['REQUEST_URI'] ?? '/';
+$currentLang    = currentLang();
+$otherLang      = $currentLang === 'it' ? 'en' : 'it';
+$otherLangLabel = $currentLang === 'it' ? '🇬🇧 EN' : '🇮🇹 IT';
+$currentUrl     = $_SERVER['REQUEST_URI'] ?? '/';
+
+/* Lab attivo (docenti) */
+$activeLab = null;
+if (isDocente() && getSelectedLabId()) {
+    $conn2 = getConnection();
+    $lid   = (int)getSelectedLabId();
+    $uid2  = (int)getCurrentUserId();
+    $rl    = mysqli_query($conn2,
+        "SELECT nome, aula, (id_responsabile = $uid2) AS is_resp FROM laboratori WHERE id = $lid LIMIT 1");
+    $activeLab = mysqli_fetch_assoc($rl);
+}
+
+/* Può gestire materiali? (admin o responsabile di almeno un lab) */
+$canGestMateriali = isAdmin();
+if (!$canGestMateriali && isDocente()) {
+    $conn3 = getConnection();
+    $uid3  = (int)getCurrentUserId();
+    $rr    = mysqli_query($conn3,
+        "SELECT 1 FROM laboratori WHERE id_responsabile = $uid3 AND attivo = 1 LIMIT 1");
+    $canGestMateriali = mysqli_num_rows($rr) > 0;
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars($currentLang) ?>">
@@ -22,35 +43,27 @@ $currentUrl    = $_SERVER['REQUEST_URI'] ?? '/';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= BASE_PATH ?>/assets/css/style.css">
     <style>
-        /* Language toggle button */
         .lang-toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 10px;
-            border: 1px solid var(--border-color, #ddd);
-            border-radius: 6px;
-            background: transparent;
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: inherit;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background 0.15s, border-color 0.15s;
-            white-space: nowrap;
+            display:inline-flex;align-items:center;gap:4px;padding:4px 10px;
+            border:1px solid var(--border-color,#ddd);border-radius:6px;
+            background:transparent;font-size:.78rem;font-weight:600;color:inherit;
+            cursor:pointer;text-decoration:none;transition:background .15s,border-color .15s;white-space:nowrap;
         }
-        .lang-toggle:hover {
-            background: var(--hover-bg, rgba(0,0,0,.06));
-            border-color: var(--primary-color, #4f46e5);
+        .lang-toggle:hover{background:var(--hover-bg,rgba(0,0,0,.06));border-color:var(--primary-color,#4f46e5);}
+        /* Lab chip nella top header */
+        .lab-chip-header {
+            display:inline-flex;align-items:center;gap:.4rem;
+            background:#e8f4f4;color:#01696f;border:1px solid #b6d9d8;
+            border-radius:20px;padding:3px 12px;font-size:.8rem;font-weight:600;
+            text-decoration:none;cursor:default;
         }
+        .lab-chip-header.resp { background:#01696f;color:#fff;border-color:#01696f; }
     </style>
 </head>
 <body>
 <div class="app-layout">
-    <!-- Sidebar Overlay (mobile) -->
     <div class="sidebar-overlay"></div>
 
-    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="<?= BASE_PATH ?>/assets/img/logo.svg" alt="Registrony" class="brand-logo">
@@ -61,6 +74,23 @@ $currentUrl    = $_SERVER['REQUEST_URI'] ?? '/';
         </div>
 
         <nav class="sidebar-nav">
+            <!-- Lab selezionato (docenti) -->
+            <?php if ($activeLab): ?>
+            <div class="nav-section" style="margin-top:0">Registro attivo</div>
+            <div style="padding:0 .5rem .5rem;">
+                <div style="background:#e8f4f4;border:1px solid #b6d9d8;border-radius:8px;padding:.6rem .8rem;">
+                    <div style="font-weight:700;font-size:.9rem;color:#01696f"><?= htmlspecialchars($activeLab['nome']) ?></div>
+                    <div style="font-size:.75rem;color:#777;margin-top:2px">Aula: <?= htmlspecialchars($activeLab['aula']) ?>
+                        <?php if ($activeLab['is_resp']): ?>&nbsp;&bull;&nbsp;<span style="color:#01696f;font-weight:600">★ Responsabile</span><?php endif; ?>
+                    </div>
+                </div>
+                <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php"
+                   style="display:block;margin-top:.4rem;font-size:.78rem;color:#01696f;text-align:center;text-decoration:none;">
+                    &#8646; Cambia laboratorio
+                </a>
+            </div>
+            <?php endif; ?>
+
             <div class="nav-section"><?= L('nav_sezione_principale') ?></div>
 
             <a href="<?= BASE_PATH ?>/index.php" class="<?= $currentPage === 'index' && strpos($_SERVER['PHP_SELF'], 'pages') === false ? 'active' : '' ?>">
@@ -98,6 +128,15 @@ $currentUrl    = $_SERVER['REQUEST_URI'] ?? '/';
                 <?= L('nav_segnalazioni') ?>
             </a>
 
+            <?php if ($canGestMateriali): ?>
+            <a href="<?= BASE_PATH ?>/pages/materiali/gestione.php<?= ($activeLab && getSelectedLabId()) ? '?laboratorio=' . (int)getSelectedLabId() : '' ?>" class="<?= $currentPage === 'gestione' && strpos($_SERVER['PHP_SELF'], 'materiali') !== false ? 'active' : '' ?>">
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </span>
+                Gestione Materiali
+            </a>
+            <?php endif; ?>
+
             <?php if (isAdmin()): ?>
             <div class="nav-section"><?= L('nav_sezione_admin') ?></div>
 
@@ -122,7 +161,7 @@ $currentUrl    = $_SERVER['REQUEST_URI'] ?? '/';
                 <?= L('nav_classi') ?>
             </a>
 
-            <a href="<?= BASE_PATH ?>/pages/admin/materiali.php" class="<?= $currentPage === 'materiali' ? 'active' : '' ?>">
+            <a href="<?= BASE_PATH ?>/pages/admin/materiali.php" class="<?= $currentPage === 'materiali' && strpos($_SERVER['PHP_SELF'],'admin') !== false ? 'active' : '' ?>">
                 <span class="nav-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                 </span>
@@ -137,13 +176,12 @@ $currentUrl    = $_SERVER['REQUEST_URI'] ?? '/';
                 <div class="user-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
                 <div class="user-role"><?= htmlspecialchars($currentUser['ruolo']) ?></div>
             </div>
-            <a href="<?= BASE_PATH ?>/logout.php" class="logout-btn" title="<?= $currentLang === 'en' ? 'Logout' : 'Esci' ?>">
+            <a href="<?= BASE_PATH ?>/logout.php" class="logout-btn" title="Esci">
                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </a>
         </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content">
         <header class="top-header">
             <div class="d-flex align-center gap-2">
@@ -151,9 +189,22 @@ $currentUrl    = $_SERVER['REQUEST_URI'] ?? '/';
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                 </button>
                 <h1 class="page-title"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h1>
+                <!-- Lab chip nella top bar per i docenti -->
+                <?php if ($activeLab): ?>
+                    <span class="lab-chip-header <?= $activeLab['is_resp'] ? 'resp' : '' ?>">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        <?= htmlspecialchars($activeLab['nome']) ?>
+                        <?php if ($activeLab['is_resp']): ?> &#9733;<?php endif; ?>
+                    </span>
+                <?php endif; ?>
             </div>
             <div class="header-actions">
                 <span class="text-muted"><?= date('d/m/Y') ?></span>
+                <?php if (isDocente() && $activeLab): ?>
+                    <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="lang-toggle" title="Cambia laboratorio">
+                        &#8646; Lab
+                    </a>
+                <?php endif; ?>
                 <a href="<?= BASE_PATH ?>/lang/set_lang.php?lang=<?= urlencode($otherLang) ?>&redirect=<?= urlencode($currentUrl) ?>"
                    class="lang-toggle"
                    title="<?= $currentLang === 'it' ? 'Switch to English' : 'Passa all\'italiano' ?>">
