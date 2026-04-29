@@ -1,17 +1,19 @@
 <?php
-$pageTitle = 'Gestione Materiali';
-require_once __DIR__ . '/../../includes/header.php';
-require_once __DIR__ . '/../../includes/form_helpers.php';
+/* ================================================================
+   TUTTA LA LOGICA POST va PRIMA di header.php
+   per evitare "headers already sent"
+   ================================================================ */
+require_once __DIR__ . '/../../config/auth.php';
 requireAdmin();
+require_once __DIR__ . '/../../config/app.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lang/it.php';
 
 $conn = getConnection();
 $L    = lang();
 
 $unitaPredefinite = ['pezzi','litri','ml','kg','g','metri','cm','rotoli','confezioni','scatole','flaconi','bottiglie'];
 
-/* ================================================================
-   ACTIONS
-   ================================================================ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -62,6 +64,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* ================================================================
+   Solo dopo i redirect includiamo header.php (stampa HTML)
+   ================================================================ */
+$pageTitle = 'Gestione Materiali';
+require_once __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/form_helpers.php';
+
+/* ================================================================
    READ
    ================================================================ */
 $filtroLab = intval($_GET['laboratorio'] ?? 0);
@@ -84,7 +93,6 @@ if (isset($_GET['edit'])) {
 
 $isEdit = $editMat !== null;
 
-/* Opzioni select */
 $labsMap = ['' => $L['mat_seleziona_lab']];
 foreach ($labs as $lab) { $labsMap[$lab['id']] = $lab['nome']; }
 
@@ -98,12 +106,9 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
 
 <?php formFieldStyles(); ?>
 
-<!-- ============================================================
-     FORM CREA / MODIFICA
-     ============================================================ -->
 <div class="card">
     <div class="card-header">
-        <h3><?= htmlspecialchars($isEdit ? '✏ Modifica Materiale' : '+ Nuovo Materiale') ?></h3>
+        <h3><?= htmlspecialchars($isEdit ? 'Modifica Materiale' : '+ Nuovo Materiale') ?></h3>
     </div>
     <div class="card-body">
         <form method="POST" id="formMateriale" novalidate>
@@ -120,7 +125,7 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
                 ]);
 
                 if (empty($labs)) {
-                    echo '<div class="alert alert-warning" style="margin:0">⚠ ' . htmlspecialchars($L['mat_err_nessun_lab']) . '</div>';
+                    echo '<div class="alert alert-warning" style="margin:0">' . htmlspecialchars($L['mat_err_nessun_lab']) . '</div>';
                 } else {
                     formSelect('id_laboratorio', $L['mat_lab'], $labsMap, [
                         'selected' => (string)($editMat['id_laboratorio'] ?? ''),
@@ -180,7 +185,6 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
     </div>
 </div>
 
-<!-- Filtro -->
 <div class="card mb-2">
     <div class="card-body">
         <form method="GET" class="d-flex gap-2 align-center flex-wrap">
@@ -201,14 +205,18 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
     </div>
 </div>
 
-<!-- Lista -->
 <div class="card">
     <div class="card-header">
-        <h3>📦 <?= htmlspecialchars($L['mat_titolo_gest']) ?> (<?= count($materiali) ?>)</h3>
+        <h3><?= htmlspecialchars($L['mat_titolo_gest']) ?> (<?= count($materiali) ?>)</h3>
     </div>
     <div class="card-body">
         <?php if (empty($materiali)): ?>
-            <div class="empty-state"><div class="empty-icon">📦</div><h4><?= htmlspecialchars($L['mat_nessuno']) ?></h4></div>
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                </div>
+                <h4><?= htmlspecialchars($L['mat_nessuno']) ?></h4>
+            </div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
@@ -237,8 +245,7 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
                             <td><strong><?= $m['quantita_disponibile'] ?? '-' ?></strong></td>
                             <td><?= $m['soglia_minima'] ?? '-' ?></td>
                             <td>
-                                <?php
-                                if (!$m['attivo']): ?>
+                                <?php if (!$m['attivo']): ?>
                                     <span class="badge badge-secondary"><?= htmlspecialchars($L['mat_stato_disattivato']) ?></span>
                                 <?php elseif ($m['quantita_disponibile'] !== null && $m['quantita_disponibile'] <= 0): ?>
                                     <span class="badge badge-danger"><?= htmlspecialchars($L['mat_stato_esaurito']) ?></span>
@@ -249,12 +256,12 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
                                 <?php endif; ?>
                             </td>
                             <td class="actions">
-                                <a href="?edit=<?= $m['id'] ?><?= $filtroLab ? '&laboratorio='.$filtroLab : '' ?>" class="btn btn-primary btn-sm">✏ <?= htmlspecialchars($L['modifica']) ?></a>
+                                <a href="?edit=<?= $m['id'] ?><?= $filtroLab ? '&laboratorio='.$filtroLab : '' ?>" class="btn btn-primary btn-sm">Modifica</a>
                                 <form method="POST" style="display:inline"
                                       onsubmit="return confirm(<?= json_encode(sprintf($L['confirm_elimina_materiale'], $m['nome'])) ?>)">
                                     <input type="hidden" name="action" value="elimina">
                                     <input type="hidden" name="id" value="<?= $m['id'] ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm">🗑 <?= htmlspecialchars($L['elimina']) ?></button>
+                                    <button type="submit" class="btn btn-danger btn-sm">Elimina</button>
                                 </form>
                             </td>
                         </tr>
@@ -272,27 +279,20 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
 (function () {
     const form = document.getElementById('formMateriale');
     if (!form) return;
-
     form.addEventListener('submit', function (e) {
         let valid = true;
-
         const nome = document.getElementById('nome');
         if (nome && !nome.value.trim()) {
             formShowErr(nome, 'err_nome', <?= json_encode($L['mat_err_nome']) ?>); valid = false;
         } else if (nome) formClearErr(nome, 'err_nome');
-
         const lab = document.getElementById('id_laboratorio');
         if (lab && !lab.value) {
             formShowErr(lab, 'err_id_laboratorio', <?= json_encode($L['mat_err_lab']) ?>); valid = false;
         } else if (lab) formClearErr(lab, 'err_id_laboratorio');
-
         const qEl = document.getElementById('quantita_disponibile');
         if (qEl && qEl.value !== '' && parseFloat(qEl.value) < 0) {
             formShowErr(qEl, 'err_quantita_disponibile', <?= json_encode($L['mat_err_quantita_neg']) ?>); valid = false;
         } else if (qEl) formClearErr(qEl, 'err_quantita_disponibile');
-
-        // soglia vs quantità già gestita dal helper JS live
-
         if (!valid) e.preventDefault();
     });
 })();
