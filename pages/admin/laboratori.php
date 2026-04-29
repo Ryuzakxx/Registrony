@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Assistente tecnico: deve esistere e avere ruolo 'tecnico' */
         if (!$idAss) {
-            $errors[] = 'L\'assistente tecnico è obbligatorio.';
+            $errors[] = 'L\'assistente tecnico è obbligatorio: ogni laboratorio deve avere un tecnico assegnato.';
         } else {
             $cAss = mysqli_query($conn,
                 "SELECT id FROM utenti WHERE id = $idAss AND ruolo = 'tecnico' AND attivo = 1 LIMIT 1");
@@ -141,7 +141,12 @@ if (isset($_GET['edit'])) {
 
             <div class="form-row">
                 <div class="form-group">
-                    <label>Assistente Tecnico * <small class="text-muted">(ruolo: tecnico)</small></label>
+                    <label>
+                        Assistente Tecnico *
+                        <small class="text-muted">(ruolo: tecnico)</small>
+                        <span class="badge badge-warning" style="font-size:10px;vertical-align:middle;"
+                              title="Ogni laboratorio deve avere un assistente tecnico assegnato">obbligatorio</span>
+                    </label>
                     <select name="id_assistente_tecnico" class="form-control" required>
                         <option value="">-- Seleziona tecnico --</option>
                         <?php if (empty($tecnici)): ?>
@@ -155,6 +160,9 @@ if (isset($_GET['edit'])) {
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </select>
+                    <div class="field-hint">
+                        Un tecnico può essere assistente di più laboratori contemporaneamente.
+                    </div>
                 </div>
 
                 <div class="form-group">
