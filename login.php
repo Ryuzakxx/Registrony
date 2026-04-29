@@ -10,14 +10,38 @@ if (isLoggedIn()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
+    $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
     if (empty($email) || empty($password)) {
         $error = 'Inserisci email e password.';
     } elseif (login($email, $password)) {
-        header('Location: ' . BASE_PATH . '/index.php');
-        exit;
+        $ruolo  = $_SESSION['user_ruolo'];
+        $userId = (int)$_SESSION['user_id'];
+
+        if ($ruolo === 'docente') {
+            // Recupera i lab assegnati al docente
+            $labs = getDocenteLabs($userId);
+
+            if (count($labs) === 0) {
+                // Nessun lab assegnato: logout e mostra errore
+                logout();
+                $error = 'Il tuo account non ha laboratori assegnati. Contatta l&#39;amministratore.';
+            } elseif (count($labs) === 1) {
+                // Un solo lab: selezione automatica
+                setSelectedLabId((int)$labs[0]['id']);
+                header('Location: ' . BASE_PATH . '/index.php');
+                exit;
+            } else {
+                // Più lab: il docente deve scegliere
+                header('Location: ' . BASE_PATH . '/pages/seleziona_laboratorio.php');
+                exit;
+            }
+        } else {
+            // Admin e Tecnico vanno direttamente alla dashboard
+            header('Location: ' . BASE_PATH . '/index.php');
+            exit;
+        }
     } else {
         $error = 'Email o password non validi, oppure account disattivato.';
     }

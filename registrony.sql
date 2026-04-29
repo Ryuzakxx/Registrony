@@ -5,13 +5,21 @@ DROP DATABASE IF EXISTS registrony;
 CREATE DATABASE registrony CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE registrony;
 
+-- ============================================================
+-- UTENTI
+-- Ruoli:
+--   admin         → accesso completo
+--   tecnico       → gestisce i propri laboratori (id_assistente_tecnico)
+--   docente       → accede ai lab assegnati via docenti_laboratori;
+--                   può essere responsabile di un lab
+-- ============================================================
 CREATE TABLE utenti (
     id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     nome       VARCHAR(100) NOT NULL,
     cognome    VARCHAR(100) NOT NULL,
     email      VARCHAR(255) NOT NULL UNIQUE,
     password   VARCHAR(255) NOT NULL,
-    ruolo      ENUM('admin','docente') NOT NULL DEFAULT 'docente',
+    ruolo      ENUM('admin','docente','tecnico') NOT NULL DEFAULT 'docente',
     telefono   VARCHAR(20) DEFAULT NULL,
     attivo     BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -22,9 +30,15 @@ INSERT INTO utenti (id, nome, cognome, email, password, ruolo, telefono) VALUES
 (1, 'Daniele', 'Signorile',  'daniele.signorile@itsff.it', 'cambiami2026', 'admin',   '333-1111111'),
 (2, 'Mario',   'Rossi',      'mario.rossi@scuola.it',      'admin123',     'admin',   '333-2222222'),
 (3, 'Luigi',   'Bianchi',    'luigi.bianchi@scuola.it',    'admin456',     'admin',   '333-3333333'),
-(4, 'Elena',   'Torricelli', 'elena.torricelli@itsff.it',  'tecnico2026',  'admin',   '333-4444444'),
+(4, 'Elena',   'Torricelli', 'elena.torricelli@itsff.it',  'tecnico2026',  'tecnico', '333-4444444'),
 (5, 'Roberto', 'Boyle',      'roberto.boyle@itsff.it',     'docente1',     'docente', NULL);
 
+-- ============================================================
+-- LABORATORI
+-- Vincoli architetturali:
+--   id_assistente_tecnico → 1 solo tecnico per lab
+--   id_responsabile       → 1 solo responsabile per lab (può essere docente)
+-- ============================================================
 CREATE TABLE laboratori (
     id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     nome                  VARCHAR(150) NOT NULL,
@@ -40,10 +54,32 @@ CREATE TABLE laboratori (
 ) ENGINE=InnoDB;
 
 INSERT INTO laboratori (nome, aula, id_assistente_tecnico, id_responsabile, descrizione) VALUES
-('Lab Sistemi e Reti', 'SR-01',  1, 2, 'Laboratorio con 30 postazioni PC'),
-('Lab Informatica',    'INF-02', 1, 3, 'Laboratorio multimediale con 25 postazioni'),
+('Lab Sistemi e Reti', 'SR-01',  4, 2, 'Laboratorio con 30 postazioni PC'),
+('Lab Informatica',    'INF-02', 4, 3, 'Laboratorio multimediale con 25 postazioni'),
 ('Lab Biennio',        'B-03',   4, 1, 'Laboratorio per classi del biennio'),
-('Lab TPSIT',          'T-04',   1, 4, 'Laboratorio di programmazione');
+('Lab TPSIT',          'T-04',   4, 5, 'Laboratorio di programmazione');
+
+-- ============================================================
+-- DOCENTI_LABORATORI
+-- Assegna uno o più laboratori a ciascun docente.
+-- Il tecnico NON usa questa tabella (usa id_assistente_tecnico).
+-- ============================================================
+CREATE TABLE docenti_laboratori (
+    id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_docente     INT UNSIGNED NOT NULL,
+    id_laboratorio INT UNSIGNED NOT NULL,
+    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_docente_lab  (id_docente, id_laboratorio),
+    CONSTRAINT fk_dl_docente     FOREIGN KEY (id_docente)     REFERENCES utenti(id)      ON DELETE CASCADE,
+    CONSTRAINT fk_dl_laboratorio FOREIGN KEY (id_laboratorio) REFERENCES laboratori(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Roberto Boyle (docente) assegnato ai lab 1, 2 e 4
+-- (è anche responsabile del lab 4)
+INSERT INTO docenti_laboratori (id_docente, id_laboratorio) VALUES
+(5, 1),
+(5, 2),
+(5, 4);
 
 CREATE TABLE classi (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
