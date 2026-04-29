@@ -14,7 +14,7 @@ if (!$id) {
 }
 
 // Carica la segnalazione prima di tutto (serve id_laboratorio per il check permessi)
-$result       = mysqli_query($conn, "SELECT sg.*, l.nome AS laboratorio, l.aula, l.id_responsabile, CONCAT(u.cognome, ' ', u.nome) AS segnalato_da FROM segnalazioni sg JOIN laboratori l ON sg.id_laboratorio = l.id JOIN utenti u ON sg.id_utente = u.id WHERE sg.id = $id");
+$result       = mysqli_query($conn, "SELECT sg.*, l.nome AS laboratorio, l.aula, l.id_responsabile, l.id_assistente_tecnico, CONCAT(u.cognome, ' ', u.nome) AS segnalato_da FROM segnalazioni sg JOIN laboratori l ON sg.id_laboratorio = l.id JOIN utenti u ON sg.id_utente = u.id WHERE sg.id = $id");
 $segnalazione = mysqli_fetch_assoc($result);
 
 if (!$segnalazione) {
@@ -22,8 +22,12 @@ if (!$segnalazione) {
     exit;
 }
 
-// Permesso di gestione: admin O responsabile del laboratorio specifico
-$canManage = isResponsabileLab((int)$segnalazione['id_laboratorio']);
+/**
+ * Permesso di gestione: admin, responsabile del laboratorio O assistente tecnico.
+ * I docenti ordinari possono solo visualizzare.
+ * Usa canGestireSegnalazioni() definita in config/auth.php.
+ */
+$canManage = canGestireSegnalazioni((int)$segnalazione['id_laboratorio']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
     $nuovoStato      = mysqli_real_escape_string($conn, $_POST['stato'] ?? '');
@@ -54,6 +58,17 @@ $bc = match($segnalazione['priorita']) {
     'media'   => 'badge-info',
     default   => 'badge-secondary'
 };
+
+// Etichetta ruolo per il pannello gestione
+$gestoreLabel = '';
+if ($canManage && !isAdmin()) {
+    $userId = (int)getCurrentUserId();
+    if ((int)$segnalazione['id_assistente_tecnico'] === $userId) {
+        $gestoreLabel = '(Assistente Tecnico)';
+    } elseif ((int)$segnalazione['id_responsabile'] === $userId) {
+        $gestoreLabel = '(Responsabile laboratorio)';
+    }
+}
 ?>
 
 <?php if (isset($_GET['success'])): ?>
@@ -95,8 +110,8 @@ $bc = match($segnalazione['priorita']) {
 <div class="card">
     <div class="card-header">
         <h3>&#128736; Gestione Segnalazione
-            <?php if (!isAdmin()): ?>
-                <small style="font-weight:normal;font-size:13px;opacity:.7">(Responsabile laboratorio)</small>
+            <?php if (!isAdmin() && $gestoreLabel): ?>
+                <small style="font-weight:normal;font-size:13px;opacity:.7"><?= htmlspecialchars($gestoreLabel) ?></small>
             <?php endif; ?>
         </h3>
     </div>
@@ -120,6 +135,10 @@ $bc = match($segnalazione['priorita']) {
             <button type="submit" class="btn btn-primary">Aggiorna Stato</button>
         </form>
     </div>
+</div>
+<?php else: ?>
+<div class="alert" style="background:#f0f8ff;border:1px solid #c0d8f0;color:#4a6f8a;border-radius:6px;padding:12px 16px;font-size:.9rem;">
+    &#128274; Solo il tecnico o il responsabile del laboratorio possono gestire questa segnalazione.
 </div>
 <?php endif; ?>
 
