@@ -19,7 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $attivo      = isset($_POST['attivo']) ? 1 : 0;
         $descSQL     = $descrizione ? "'$descrizione'" : 'NULL';
 
-        if ($nome && $aula && $idAss && $idResp) {
+        // Verifica che il responsabile scelto sia effettivamente un docente
+        $checkResp = mysqli_query($conn, "SELECT id FROM utenti WHERE id = $idResp AND ruolo = 'docente' AND attivo = 1 LIMIT 1");
+        $respValido = mysqli_num_rows($checkResp) > 0;
+
+        if ($nome && $aula && $idAss && $idResp && $respValido) {
             if ($action === 'crea') {
                 mysqli_query($conn, "INSERT INTO laboratori (nome, aula, id_assistente_tecnico, id_responsabile, descrizione, attivo) VALUES ('$nome','$aula',$idAss,$idResp,$descSQL,$attivo)");
                 header('Location: ' . BASE_PATH . '/pages/admin/laboratori.php?success=Laboratorio creato!');
@@ -29,7 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . BASE_PATH . '/pages/admin/laboratori.php?success=Laboratorio aggiornato!');
             }
         } else {
-            header('Location: ' . BASE_PATH . '/pages/admin/laboratori.php?error=Compila tutti i campi obbligatori');
+            $errMsg = (!$respValido && $idResp) ? 'Il responsabile deve essere un docente attivo' : 'Compila tutti i campi obbligatori';
+            header('Location: ' . BASE_PATH . '/pages/admin/laboratori.php?error=' . urlencode($errMsg));
         }
         exit;
     }
@@ -58,8 +63,8 @@ $resAdmins = mysqli_query($conn, "SELECT id, nome, cognome FROM utenti WHERE ruo
 $admins    = [];
 while ($row = mysqli_fetch_assoc($resAdmins)) $admins[] = $row;
 
-// Responsabili: TUTTI i docenti attivi (admin e docenti)
-$resDocenti = mysqli_query($conn, "SELECT id, nome, cognome, ruolo FROM utenti WHERE attivo=1 ORDER BY cognome, nome");
+// Responsabili: solo docenti attivi
+$resDocenti = mysqli_query($conn, "SELECT id, nome, cognome FROM utenti WHERE ruolo='docente' AND attivo=1 ORDER BY cognome, nome");
 $docenti    = [];
 while ($row = mysqli_fetch_assoc($resDocenti)) $docenti[] = $row;
 
@@ -98,15 +103,18 @@ if (isset($_GET['edit'])) {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Responsabile * <small class="text-muted">(docente o admin)</small></label>
+                    <label>Responsabile * <small class="text-muted">(docente)</small></label>
                     <select name="id_responsabile" class="form-control" required>
                         <option value="">-- Seleziona --</option>
-                        <?php foreach ($docenti as $d): ?>
-                            <option value="<?= $d['id'] ?>" <?= ($d['id']==($editLab['id_responsabile']??'')) ? 'selected':'' ?>>
-                                <?= htmlspecialchars($d['cognome'].' '.$d['nome']) ?>
-                                <?php if ($d['ruolo'] === 'admin'): ?> (admin)<?php endif; ?>
-                            </option>
-                        <?php endforeach; ?>
+                        <?php if (empty($docenti)): ?>
+                            <option disabled>Nessun docente attivo disponibile</option>
+                        <?php else: ?>
+                            <?php foreach ($docenti as $d): ?>
+                                <option value="<?= $d['id'] ?>" <?= ($d['id']==($editLab['id_responsabile']??'')) ? 'selected':'' ?>>
+                                    <?= htmlspecialchars($d['cognome'].' '.$d['nome']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </select>
                 </div>
             </div>
