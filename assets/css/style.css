@@ -28,7 +28,7 @@
     --sidebar-hover-bg: rgba(255,255,255,0.06);
     --sidebar-active-bg: rgba(59,130,246,0.18);
     --sidebar-active-color: #93c5fd;
-    --sidebar-section-color: #475569;
+    --sidebar-section-color: #94a3b8;
     --sidebar-width: 256px;
     --header-height: 60px;
     --radius: 8px;
@@ -127,7 +127,7 @@ a:hover { text-decoration: underline; }
     display: flex;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .sidebar-header .brand-logo {
@@ -151,7 +151,7 @@ a:hover { text-decoration: underline; }
 
 .sidebar-header .brand-sub {
     font-size: 10.5px;
-    color: var(--sidebar-section-color);
+    color: #94a3b8;
     letter-spacing: 0.3px;
 }
 
@@ -173,7 +173,7 @@ a:hover { text-decoration: underline; }
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 1.3px;
-    color: var(--sidebar-section-color);
+    color: #94a3b8;
     font-weight: 600;
 }
 
@@ -272,7 +272,7 @@ a:hover { text-decoration: underline; }
 }
 
 .sidebar-user .user-role {
-    color: var(--sidebar-section-color);
+    color: #94a3b8;
     font-size: 11px;
     text-transform: capitalize;
 }
@@ -284,7 +284,7 @@ a:hover { text-decoration: underline; }
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--sidebar-section-color);
+    color: #94a3b8;
     background: transparent;
     border: 1px solid rgba(255,255,255,0.07);
     cursor: pointer;
