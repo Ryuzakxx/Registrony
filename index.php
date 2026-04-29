@@ -55,28 +55,36 @@ while ($row = mysqli_fetch_assoc($result)) $segnalazioni[] = $row;
 
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-icon blue">&#128187;</div>
+        <div class="stat-icon blue">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totLabs ?></div>
             <div class="stat-label">Laboratori attivi</div>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon green">&#9997;</div>
+        <div class="stat-icon green">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totSessioniOggi ?></div>
             <div class="stat-label">Sessioni oggi</div>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon orange">&#9888;</div>
+        <div class="stat-icon orange">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totSegnAperte ?></div>
             <div class="stat-label">Segnalazioni aperte</div>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon red">&#128230;</div>
+        <div class="stat-icon red">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totMatEsaurimento ?></div>
             <div class="stat-label">Materiali in esaurimento</div>
@@ -86,13 +94,18 @@ while ($row = mysqli_fetch_assoc($result)) $segnalazioni[] = $row;
 
 <div class="card">
     <div class="card-header">
-        <h3>&#128197; Sessioni di oggi (<?= date('d/m/Y') ?>)</h3>
+        <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Sessioni di oggi (<?= date('d/m/Y') ?>)
+        </h3>
         <a href="<?= BASE_PATH ?>/pages/sessioni/nuova.php" class="btn btn-primary btn-sm">+ Nuova Sessione</a>
     </div>
     <div class="card-body">
         <?php if (empty($sessioniOggi)): ?>
             <div class="empty-state">
-                <div class="empty-icon">&#128203;</div>
+                <div class="empty-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </div>
                 <h4>Nessuna sessione oggi</h4>
                 <p>Non ci sono sessioni registrate per oggi.</p>
             </div>
@@ -123,15 +136,20 @@ while ($row = mysqli_fetch_assoc($result)) $segnalazioni[] = $row;
 
 <div class="card">
     <div class="card-header">
-        <h3>&#9888; Segnalazioni aperte</h3>
+        <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Segnalazioni aperte
+        </h3>
         <a href="<?= BASE_PATH ?>/pages/segnalazioni/index.php" class="btn btn-secondary btn-sm">Vedi tutte</a>
     </div>
     <div class="card-body">
         <?php if (empty($segnalazioni)): ?>
             <div class="empty-state">
-                <div class="empty-icon">&#10004;</div>
+                <div class="empty-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
                 <h4>Nessuna segnalazione aperta</h4>
-                <p>Tutto funziona correttamente!</p>
+                <p>Tutto funziona correttamente.</p>
             </div>
         <?php else: ?>
             <div class="table-responsive">
