@@ -175,6 +175,32 @@ function isResponsabileLab(int $idLab): bool {
 }
 
 /**
+ * Verifica se l'utente corrente può GESTIRE le segnalazioni di un laboratorio.
+ *
+ * Regola: tutti possono INVIARE segnalazioni, ma solo queste figure
+ * possono cambiare stato, aggiungere note di risoluzione, ecc.:
+ *   - admin               → sempre
+ *   - responsabile del lab → docente nominato id_responsabile
+ *   - assistente tecnico   → tecnico nominato id_assistente_tecnico
+ *
+ * Nota: un tecnico NON può essere responsabile (vincolo architetturale),
+ * quindi le due condizioni sono sempre mutualmente esclusive per ruolo.
+ */
+function canGestireSegnalazioni(int $idLab): bool {
+    if (isAdmin()) return true;
+    $conn   = getConnection();
+    $userId = intval($_SESSION['user_id'] ?? 0);
+    if (!$userId || !$idLab) return false;
+    $res = mysqli_query($conn, "
+        SELECT 1 FROM laboratori
+        WHERE id = $idLab
+          AND (id_responsabile = $userId OR id_assistente_tecnico = $userId)
+        LIMIT 1
+    ");
+    return mysqli_num_rows($res) > 0;
+}
+
+/**
  * True se l'utente può gestire ALMENO un laboratorio.
  * Usato per mostrare/nascondere voci di menu.
  */
