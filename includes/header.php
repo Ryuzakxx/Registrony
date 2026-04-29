@@ -3,6 +3,9 @@ require_once __DIR__ . '/../config/auth.php';
 requireLogin();
 $currentUser = getCurrentUser();
 $currentPage = basename($_SERVER['PHP_SELF'], '.php');
+// Avatar initials
+$nameParts = explode(' ', trim($currentUser['nome_completo']));
+$initials = strtoupper(substr($nameParts[0], 0, 1) . (isset($nameParts[1]) ? substr($nameParts[1], 0, 1) : ''));
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -22,49 +25,93 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
     <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <h2>&#128300; Registrony</h2>
-            <small>del Laboratoriony</small>
+            <img src="<?= BASE_PATH ?>/assets/img/logo.svg" alt="Registrony" class="brand-logo">
+            <div class="brand-text">
+                <span class="brand-name">Registrony</span>
+                <span class="brand-sub">del Laboratoriony</span>
+            </div>
         </div>
+
         <nav class="sidebar-nav">
             <div class="nav-section">Principale</div>
-            <a href="<?= BASE_PATH ?>/index.php" class="<?= $currentPage === 'index' ? 'active' : '' ?>">
-                <span class="nav-icon">&#127968;</span> Dashboard
+
+            <a href="<?= BASE_PATH ?>/index.php" class="<?= $currentPage === 'index' && strpos($_SERVER['PHP_SELF'], 'pages') === false ? 'active' : '' ?>">
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                </span>
+                Dashboard
             </a>
+
             <a href="<?= BASE_PATH ?>/pages/sessioni/index.php" class="<?= $currentPage === 'index' && strpos($_SERVER['PHP_SELF'], 'sessioni') !== false ? 'active' : '' ?>">
-                <span class="nav-icon">&#9997;</span> Sessioni Lab
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </span>
+                Sessioni Lab
             </a>
+
             <a href="<?= BASE_PATH ?>/pages/sessioni/nuova.php" class="<?= $currentPage === 'nuova' ? 'active' : '' ?>">
-                <span class="nav-icon">&#10133;</span> Nuova Sessione
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                </span>
+                Nuova Sessione
             </a>
+
             <a href="<?= BASE_PATH ?>/pages/materiali/utilizzo.php" class="<?= $currentPage === 'utilizzo' ? 'active' : '' ?>">
-                <span class="nav-icon">&#128230;</span> Materiali
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </span>
+                Materiali
             </a>
+
             <a href="<?= BASE_PATH ?>/pages/segnalazioni/index.php" class="<?= strpos($_SERVER['PHP_SELF'], 'segnalazioni') !== false && $currentPage === 'index' ? 'active' : '' ?>">
-                <span class="nav-icon">&#9888;</span> Segnalazioni
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </span>
+                Segnalazioni
             </a>
 
             <?php if (isAdmin()): ?>
             <div class="nav-section">Amministrazione</div>
+
             <a href="<?= BASE_PATH ?>/pages/admin/laboratori.php" class="<?= $currentPage === 'laboratori' ? 'active' : '' ?>">
-                <span class="nav-icon">&#128187;</span> Laboratori
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </span>
+                Laboratori
             </a>
+
             <a href="<?= BASE_PATH ?>/pages/admin/utenti.php" class="<?= $currentPage === 'utenti' ? 'active' : '' ?>">
-                <span class="nav-icon">&#128101;</span> Utenti
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </span>
+                Utenti
             </a>
+
             <a href="<?= BASE_PATH ?>/pages/admin/classi.php" class="<?= $currentPage === 'classi' ? 'active' : '' ?>">
-                <span class="nav-icon">&#127979;</span> Classi
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                </span>
+                Classi
             </a>
+
             <a href="<?= BASE_PATH ?>/pages/admin/materiali.php" class="<?= $currentPage === 'materiali' ? 'active' : '' ?>">
-                <span class="nav-icon">&#128206;</span> Gestione Materiali
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </span>
+                Gestione Materiali
             </a>
             <?php endif; ?>
         </nav>
+
         <div class="sidebar-user">
+            <div class="user-avatar"><?= htmlspecialchars($initials) ?></div>
             <div class="user-info">
                 <div class="user-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
                 <div class="user-role"><?= htmlspecialchars($currentUser['ruolo']) ?></div>
             </div>
-            <a href="<?= BASE_PATH ?>/logout.php" class="logout-btn" title="Esci">&#9211;</a>
+            <a href="<?= BASE_PATH ?>/logout.php" class="logout-btn" title="Esci">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </a>
         </div>
     </aside>
 
@@ -72,7 +119,9 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
     <main class="main-content">
         <header class="top-header">
             <div class="d-flex align-center gap-2">
-                <button class="menu-toggle" aria-label="Menu">&#9776;</button>
+                <button class="menu-toggle" aria-label="Menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
                 <h1 class="page-title"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h1>
             </div>
             <div class="header-actions">
@@ -82,11 +131,11 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
         <div class="page-content">
             <?php if (isset($_GET['success'])): ?>
                 <div class="alert alert-success" data-auto-dismiss>
-                    &#10004; <?= htmlspecialchars($_GET['success']) ?>
+                    <?= htmlspecialchars($_GET['success']) ?>
                 </div>
             <?php endif; ?>
             <?php if (isset($_GET['error'])): ?>
                 <div class="alert alert-danger" data-auto-dismiss>
-                    &#10060; <?= htmlspecialchars($_GET['error']) ?>
+                    <?= htmlspecialchars($_GET['error']) ?>
                 </div>
             <?php endif; ?>
