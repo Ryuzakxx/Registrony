@@ -1,32 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" aria-label="Registrony - ITT Fermi" role="img">
-  <!-- Sfondo scuro -->
-  <rect width="48" height="48" rx="10" fill="#0f1e30"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none" aria-label="Registrony - ITT Fermi" role="img">
 
-  <!-- Ingranaggio esterno (bordo dentato) -->
+  <!-- Sfondo tile -->
+  <rect width="56" height="56" rx="12" fill="#0f1e30"/>
+
+  <!-- Ingranaggio esterno dentato -->
   <path d="
-    M24 5
-    L25.8 8.2 L29.4 7.5 L30.2 11 L33.6 11.8 L32.5 15.2
-    L35.5 17.2 L33.5 20.2 L35.5 23.5 L32.2 25
-    L33 28.6 L29.5 29.4 L28.8 33 L25.2 32.2
-    L24 35.5 L22.8 32.2 L19.2 33 L18.5 29.4
-    L15 28.6 L15.8 25 L12.5 23.5 L14.5 20.2
-    L12.5 17.2 L15.5 15.2 L14.4 11.8 L17.8 11
-    L18.6 7.5 L22.2 8.2 Z
-  " fill="#1e3a5f" stroke="#2563eb" stroke-width="0.8"/>
+    M28 6
+    L30.2 9.8 L34.5 8.9 L35.5 13.2 L39.6 14.2 L38.2 18.3
+    L42 20.8 L39.6 24.5 L42 28.5 L38 30.5
+    L39 34.8 L34.7 35.8 L33.8 40.1 L29.5 39.2
+    L28 43 L26.5 39.2 L22.2 40.1 L21.3 35.8
+    L17 34.8 L18 30.5 L14 28.5 L16.4 24.5
+    L14 20.8 L17.8 18.3 L16.4 14.2 L20.5 13.2
+    L21.5 8.9 L25.8 9.8 Z
+  " fill="#1a56b0" stroke="#1a56b0" stroke-width="0.5" stroke-linejoin="round"/>
 
-  <!-- Cerchio interno bianco -->
-  <circle cx="24" cy="20.5" r="11" fill="#0f1e30" stroke="#3b82f6" stroke-width="1"/>
-  <circle cx="24" cy="20.5" r="9.5" fill="#1e3a5f"/>
+  <!-- Cerchio interno bianco (come logo originale) -->
+  <circle cx="28" cy="25" r="14" fill="#ffffff"/>
+  <circle cx="28" cy="25" r="13" fill="#f0f4ff"/>
 
-  <!-- Antenna parabolica (ispirata logo Fermi) -->
-  <path d="M20 17 Q24 12.5 28 17" stroke="#93c5fd" stroke-width="1.4" stroke-linecap="round" fill="none"/>
-  <path d="M21.5 18.5 Q24 15 26.5 18.5" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" fill="none"/>
-  <line x1="24" y1="19" x2="24" y2="26" stroke="#93c5fd" stroke-width="1.3" stroke-linecap="round"/>
-  <line x1="21" y1="26" x2="27" y2="26" stroke="#3b82f6" stroke-width="1.3" stroke-linecap="round"/>
+  <!-- Antenna parabolica -->
+  <path d="M23 21 Q28 14.5 33 21" stroke="#1a56b0" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <path d="M24.8 22.8 Q28 17.5 31.2 22.8" stroke="#1a56b0" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <!-- Palo antenna -->
+  <line x1="28" y1="23" x2="28" y2="31" stroke="#1a3a6b" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- Base palo -->
+  <line x1="25" y1="31" x2="31" y2="31" stroke="#1a3a6b" stroke-width="1.6" stroke-linecap="round"/>
 
-  <!-- Squadra (strumento tecnico) -->
-  <path d="M15.5 25.5 L15.5 30 L20 30" stroke="#60a5fa" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Squadra tecnica (basso sinistra) -->
+  <path d="M18.5 28.5 L18.5 34 L24 34" stroke="#1a56b0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Angolo retto marcatore -->
+  <path d="M18.5 30.5 L20.5 30.5 L20.5 28.5" stroke="#1a56b0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 
-  <!-- Testo FERMI in basso -->
-  <text x="24" y="40" font-family="Arial, sans-serif" font-size="4.5" font-weight="700" fill="#93c5fd" text-anchor="middle" letter-spacing="1.5">FERMI</text>
+  <!-- Martello (basso destra, ispirato logo Fermi) -->
+  <rect x="31" y="29" width="6" height="2.5" rx="0.8" fill="#1a56b0"/>
+  <rect x="33" y="31.5" width="2" height="3.5" rx="0.6" fill="#1a3a6b"/>
+
+  <!-- Testo FERMI nell'ingranaggio in basso -->
+  <text x="28" y="47" font-family="Arial, Helvetica, sans-serif" font-size="5" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1.8">FERMI</text>
+
 </svg>
