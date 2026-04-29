@@ -42,6 +42,32 @@ function isAdmin(): bool {
     return isset($_SESSION['user_ruolo']) && $_SESSION['user_ruolo'] === 'admin';
 }
 
+/**
+ * Verifica se l'utente corrente è il responsabile del laboratorio indicato.
+ * Gli admin bypassano sempre il controllo.
+ */
+function isResponsabileLab(int $idLab): bool {
+    if (isAdmin()) return true;
+    $conn   = getConnection();
+    $userId = intval($_SESSION['user_id'] ?? 0);
+    if (!$userId || !$idLab) return false;
+    $res = mysqli_query($conn, "SELECT 1 FROM laboratori WHERE id = $idLab AND id_responsabile = $userId LIMIT 1");
+    return mysqli_num_rows($res) > 0;
+}
+
+/**
+ * Verifica se l'utente può gestire ALMENO un laboratorio.
+ * Usato per mostrare/nascondere voci di menu.
+ */
+function canManageAnyLab(): bool {
+    if (isAdmin()) return true;
+    $conn   = getConnection();
+    $userId = intval($_SESSION['user_id'] ?? 0);
+    if (!$userId) return false;
+    $res = mysqli_query($conn, "SELECT 1 FROM laboratori WHERE id_responsabile = $userId AND attivo = 1 LIMIT 1");
+    return mysqli_num_rows($res) > 0;
+}
+
 function requireLogin(): void {
     if (!isLoggedIn()) {
         header('Location: ' . BASE_PATH . '/login.php');
@@ -52,6 +78,17 @@ function requireLogin(): void {
 function requireAdmin(): void {
     requireLogin();
     if (!isAdmin()) {
+        header('Location: ' . BASE_PATH . '/index.php?error=unauthorized');
+        exit;
+    }
+}
+
+/**
+ * Richiede che l'utente sia admin OPPURE responsabile del laboratorio $idLab.
+ */
+function requireResponsabileLab(int $idLab): void {
+    requireLogin();
+    if (!isResponsabileLab($idLab)) {
         header('Location: ' . BASE_PATH . '/index.php?error=unauthorized');
         exit;
     }

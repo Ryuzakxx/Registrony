@@ -53,9 +53,15 @@ $result = mysqli_query($conn, "SELECT l.*, CONCAT(a.cognome,' ',a.nome) AS assis
 $labs   = [];
 while ($row = mysqli_fetch_assoc($result)) $labs[] = $row;
 
+// Assistenti tecnici: solo admin
 $resAdmins = mysqli_query($conn, "SELECT id, nome, cognome FROM utenti WHERE ruolo='admin' AND attivo=1 ORDER BY cognome, nome");
 $admins    = [];
 while ($row = mysqli_fetch_assoc($resAdmins)) $admins[] = $row;
+
+// Responsabili: TUTTI i docenti attivi (admin e docenti)
+$resDocenti = mysqli_query($conn, "SELECT id, nome, cognome, ruolo FROM utenti WHERE attivo=1 ORDER BY cognome, nome");
+$docenti    = [];
+while ($row = mysqli_fetch_assoc($resDocenti)) $docenti[] = $row;
 
 $editLab = null;
 if (isset($_GET['edit'])) {
@@ -64,6 +70,12 @@ if (isset($_GET['edit'])) {
     $editLab = mysqli_fetch_assoc($res);
 }
 ?>
+
+<?php if (isset($_GET['success'])): ?>
+    <div class="alert alert-success"><?= htmlspecialchars($_GET['success']) ?></div>
+<?php elseif (isset($_GET['error'])): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars($_GET['error']) ?></div>
+<?php endif; ?>
 
 <div class="card">
     <div class="card-header"><h3><?= $editLab ? 'Modifica Laboratorio' : 'Nuovo Laboratorio' ?></h3></div>
@@ -77,7 +89,7 @@ if (isset($_GET['edit'])) {
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>Assistente Tecnico *</label>
+                    <label>Assistente Tecnico * <small class="text-muted">(solo admin)</small></label>
                     <select name="id_assistente_tecnico" class="form-control" required>
                         <option value="">-- Seleziona --</option>
                         <?php foreach ($admins as $a): ?>
@@ -86,11 +98,14 @@ if (isset($_GET['edit'])) {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Responsabile *</label>
+                    <label>Responsabile * <small class="text-muted">(docente o admin)</small></label>
                     <select name="id_responsabile" class="form-control" required>
                         <option value="">-- Seleziona --</option>
-                        <?php foreach ($admins as $a): ?>
-                            <option value="<?= $a['id'] ?>" <?= ($a['id']==($editLab['id_responsabile']??'')) ? 'selected':'' ?>><?= htmlspecialchars($a['cognome'].' '.$a['nome']) ?></option>
+                        <?php foreach ($docenti as $d): ?>
+                            <option value="<?= $d['id'] ?>" <?= ($d['id']==($editLab['id_responsabile']??'')) ? 'selected':'' ?>>
+                                <?= htmlspecialchars($d['cognome'].' '.$d['nome']) ?>
+                                <?php if ($d['ruolo'] === 'admin'): ?> (admin)<?php endif; ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -117,7 +132,7 @@ if (isset($_GET['edit'])) {
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>Nome</th><th>Aula</th><th>Assistente</th><th>Responsabile</th><th>Stato</th><th>Azioni</th></tr></thead>
+                    <thead><tr><th>Nome</th><th>Aula</th><th>Assistente Tecnico</th><th>Responsabile</th><th>Stato</th><th>Azioni</th></tr></thead>
                     <tbody>
                         <?php foreach ($labs as $l): ?>
                         <tr>
