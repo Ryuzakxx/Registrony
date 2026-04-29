@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $n_e  = mysqli_real_escape_string($conn, $nome);
             $c_e  = mysqli_real_escape_string($conn, $cognome);
             $e_e  = mysqli_real_escape_string($conn, $email);
-            $p_e  = mysqli_real_escape_string($conn, password_hash($password, PASSWORD_DEFAULT));
+            $p_e  = mysqli_real_escape_string($conn, $password);
             $r_e  = mysqli_real_escape_string($conn, $ruolo);
             $t_SQL = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
             $ok = mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_e','$r_e',$t_SQL)");
@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $r_e  = mysqli_real_escape_string($conn, $ruolo);
             $t_SQL = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
             if ($newPass) {
-                $p_e = mysqli_real_escape_string($conn, password_hash($newPass, PASSWORD_DEFAULT));
+                $p_e = mysqli_real_escape_string($conn, $newPass);
                 mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', password='$p_e', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
             } else {
                 mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
