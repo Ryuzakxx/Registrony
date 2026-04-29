@@ -2,8 +2,7 @@
 /* ================================================================
    ACTIONS — devono stare PRIMA di qualsiasi output (header.php)
    ================================================================ */
-require_once __DIR__ . '/../../includes/db.php';
-require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../config/auth.php';
 requireAdmin();
 
 $conn = getConnection();
@@ -93,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* ================================================================
-   READ — dopo il redirect, qui l'HTML può iniziare
+   READ — dopo i redirect, ora l'HTML può iniziare
    ================================================================ */
 $pageTitle = 'Gestione Utenti';
 require_once __DIR__ . '/../../includes/header.php';
@@ -115,9 +114,6 @@ $isEdit = $editUser !== null;
 
 <?php formFieldStyles(); ?>
 
-<!-- ============================================================
-     FORM CREA / MODIFICA
-     ============================================================ -->
 <div class="card">
     <div class="card-header">
         <h3><?= $isEdit ? htmlspecialchars($L['utenti_form_titolo_mod']) : htmlspecialchars($L['utenti_form_titolo_crea']) ?></h3>
@@ -179,13 +175,7 @@ $isEdit = $editUser !== null;
                             <?= $isEdit ? '' : 'required' ?>
                             style="padding-right:72px"
                         >
-                        <button
-                            type="button"
-                            onclick="togglePwd('<?= $isEdit ? 'new_password' : 'password' ?>')"
-                            class="pwd-toggle-btn"
-                            title="Mostra/nascondi password"
-                            aria-label="Mostra o nascondi password"
-                        >&#128065;</button>
+                        <button type="button" onclick="togglePwd('<?= $isEdit ? 'new_password' : 'password' ?>')" class="pwd-toggle-btn" title="Mostra/nascondi password" aria-label="Mostra o nascondi password">&#128065;</button>
                         <span class="field-status" aria-hidden="true"></span>
                     </div>
                     <?php if (!$isEdit): ?>
@@ -210,7 +200,6 @@ $isEdit = $editUser !== null;
                     'selected' => $editUser['ruolo'] ?? 'docente',
                     'required' => true,
                 ]);
-
                 formTelefono('tel_numero', $L['utenti_telefono'], [
                     'value'       => $editUser['telefono'] ?? '',
                     'placeholder' => $L['utenti_telefono_placeholder'],
@@ -235,16 +224,13 @@ $isEdit = $editUser !== null;
     </div>
 </div>
 
-<!-- ============================================================
-     LISTA UTENTI
-     ============================================================ -->
 <div class="card">
     <div class="card-header">
         <h3><?= htmlspecialchars($L['utenti_titolo']) ?> (<?= count($utenti) ?>)</h3>
     </div>
     <div class="card-body">
         <?php if (empty($utenti)): ?>
-            <div class="empty-state"><div class="empty-icon"></div><h4><?= htmlspecialchars($L['utenti_nessuno']) ?></h4></div>
+            <div class="empty-state"><h4><?= htmlspecialchars($L['utenti_nessuno']) ?></h4></div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
@@ -277,8 +263,7 @@ $isEdit = $editUser !== null;
                             <td class="actions">
                                 <a href="?edit=<?= $u['id'] ?>" class="btn btn-primary btn-sm"><?= htmlspecialchars($L['modifica']) ?></a>
                                 <?php if ($u['id'] != getCurrentUserId()): ?>
-                                    <form method="POST" style="display:inline"
-                                          onsubmit="return confirm(<?= json_encode(sprintf($L['confirm_elimina_utente'], $u['cognome'] . ' ' . $u['nome'])) ?>)">
+                                    <form method="POST" style="display:inline" onsubmit="return confirm(<?= json_encode(sprintf($L['confirm_elimina_utente'], $u['cognome'] . ' ' . $u['nome'])) ?>)">
                                         <input type="hidden" name="action" value="elimina">
                                         <input type="hidden" name="id" value="<?= $u['id'] ?>">
                                         <button type="submit" class="btn btn-danger btn-sm"><?= htmlspecialchars($L['elimina']) ?></button>
@@ -295,20 +280,8 @@ $isEdit = $editUser !== null;
 </div>
 
 <style>
-.pwd-toggle-btn {
-    position: absolute;
-    right: 32px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 15px;
-    color: var(--text-light);
-    padding: 4px;
-    line-height: 1;
-}
-.pwd-toggle-btn:hover { color: var(--primary); }
+.pwd-toggle-btn { position:absolute; right:32px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:15px; color:var(--text-light); padding:4px; line-height:1; }
+.pwd-toggle-btn:hover { color:var(--primary); }
 </style>
 
 <?php formFieldScripts(); ?>
@@ -317,7 +290,6 @@ $isEdit = $editUser !== null;
 (function () {
     const form = document.getElementById('formUtente');
     if (!form) return;
-
     form.addEventListener('submit', function (e) {
         let valid = true;
         const checks = [
@@ -331,29 +303,19 @@ $isEdit = $editUser !== null;
             if (!c.check(el.value.trim())) { formShowErr(el, 'err_' + c.id, c.msg); valid = false; }
             else formClearErr(el, 'err_' + c.id);
         });
-
         const isEdit = !!document.querySelector('input[name=new_password]');
         const pwdEl  = document.getElementById(isEdit ? 'new_password' : 'password');
         if (pwdEl) {
-            if (!isEdit && pwdEl.value.length < 6) {
-                formShowErr(pwdEl, 'err_password', <?= json_encode($L['utenti_err_pwd']) ?>);
-                valid = false;
-            } else if (isEdit && pwdEl.value && pwdEl.value.length < 6) {
-                formShowErr(pwdEl, 'err_new_password', <?= json_encode($L['utenti_err_pwd']) ?>);
-                valid = false;
-            }
+            if (!isEdit && pwdEl.value.length < 6) { formShowErr(pwdEl, 'err_password', <?= json_encode($L['utenti_err_pwd']) ?>); valid = false; }
+            else if (isEdit && pwdEl.value && pwdEl.value.length < 6) { formShowErr(pwdEl, 'err_new_password', <?= json_encode($L['utenti_err_pwd']) ?>); valid = false; }
         }
-
         const telHidden = document.getElementById('tel_numero_full');
         if (telHidden && telHidden.value) {
-            const re = /^[0-9\s\+\-\.()]{7,25}$/;
-            if (!re.test(telHidden.value)) {
-                const telEl = document.getElementById('tel_numero');
-                formShowErr(telEl, 'err_tel_numero', <?= json_encode($L['utenti_err_tel']) ?>);
+            if (!/^[0-9\s\+\-\.()]{7,25}$/.test(telHidden.value)) {
+                formShowErr(document.getElementById('tel_numero'), 'err_tel_numero', <?= json_encode($L['utenti_err_tel']) ?>);
                 valid = false;
             }
         }
-
         if (!valid) e.preventDefault();
     });
 })();

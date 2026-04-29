@@ -2,8 +2,7 @@
 /* ================================================================
    ACTIONS — devono stare PRIMA di qualsiasi output (header.php)
    ================================================================ */
-require_once __DIR__ . '/../../includes/db.php';
-require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../config/auth.php';
 requireAdmin();
 
 $conn = getConnection();
@@ -45,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* ================================================================
-   READ — dopo il redirect, qui l'HTML può iniziare
+   READ — dopo i redirect, ora l'HTML può iniziare
    ================================================================ */
 $pageTitle = 'Gestione Laboratori';
 require_once __DIR__ . '/../../includes/header.php';

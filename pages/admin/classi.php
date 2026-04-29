@@ -2,8 +2,7 @@
 /* ================================================================
    ACTIONS — devono stare PRIMA di qualsiasi output (header.php)
    ================================================================ */
-require_once __DIR__ . '/../../includes/db.php';
-require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../config/auth.php';
 requireAdmin();
 
 $conn = getConnection();
@@ -72,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* ================================================================
-   READ — dopo il redirect, qui l'HTML può iniziare
+   READ — dopo i redirect, ora l'HTML può iniziare
    ================================================================ */
 $pageTitle = 'Gestione Classi';
 require_once __DIR__ . '/../../includes/header.php';
@@ -132,12 +131,10 @@ if ($indAttuale && !in_array($indAttuale, $indirizziPredefiniti)) {
                     'pattern'     => '[0-9][A-Za-z]{1,3}',
                     'extra'       => 'style="text-transform:uppercase"',
                 ]);
-
                 formSelect('anno_scolastico', $L['classi_anno'], $anniMap, [
                     'selected' => $editClasse['anno_scolastico'] ?? $annoCorrente,
                     'required' => true,
                 ]);
-
                 formSelect('indirizzo', $L['classi_indirizzo'], $indMap, [
                     'selected' => $indAttuale,
                 ]);
@@ -166,9 +163,7 @@ if ($indAttuale && !in_array($indAttuale, $indirizziPredefiniti)) {
     </div>
     <div class="card-body">
         <?php if (empty($classi)): ?>
-            <div class="empty-state">
-                <h4><?= htmlspecialchars($L['classi_nessuna']) ?></h4>
-            </div>
+            <div class="empty-state"><h4><?= htmlspecialchars($L['classi_nessuna']) ?></h4></div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
@@ -194,8 +189,7 @@ if ($indAttuale && !in_array($indAttuale, $indirizziPredefiniti)) {
                             </td>
                             <td class="actions">
                                 <a href="?edit=<?= $c['id'] ?>" class="btn btn-primary btn-sm"><?= htmlspecialchars($L['modifica']) ?></a>
-                                <form method="POST" style="display:inline"
-                                      onsubmit="return confirm(<?= json_encode(sprintf($L['confirm_elimina_classe'], $c['nome'])) ?>)">
+                                <form method="POST" style="display:inline" onsubmit="return confirm(<?= json_encode(sprintf($L['confirm_elimina_classe'], $c['nome'])) ?>)">
                                     <input type="hidden" name="action" value="elimina">
                                     <input type="hidden" name="id" value="<?= $c['id'] ?>">
                                     <button type="submit" class="btn btn-danger btn-sm"><?= htmlspecialchars($L['elimina']) ?></button>
@@ -216,29 +210,18 @@ if ($indAttuale && !in_array($indAttuale, $indirizziPredefiniti)) {
 (function () {
     const form = document.getElementById('formClasse');
     if (!form) return;
-
     form.addEventListener('submit', function (e) {
         let valid = true;
-
         const nome = document.getElementById('nome');
         if (nome) {
             const re = /^[0-9][A-Z]{1,3}$/;
-            if (!nome.value.trim()) {
-                formShowErr(nome, 'err_nome', <?= json_encode($L['classi_err_nome']) ?>); valid = false;
-            } else if (!re.test(nome.value.toUpperCase())) {
-                formShowErr(nome, 'err_nome', <?= json_encode($L['classi_err_nome_formato']) ?>); valid = false;
-            } else {
-                formClearErr(nome, 'err_nome');
-            }
+            if (!nome.value.trim()) { formShowErr(nome, 'err_nome', <?= json_encode($L['classi_err_nome']) ?>); valid = false; }
+            else if (!re.test(nome.value.toUpperCase())) { formShowErr(nome, 'err_nome', <?= json_encode($L['classi_err_nome_formato']) ?>); valid = false; }
+            else { formClearErr(nome, 'err_nome'); }
         }
-
         const anno = document.getElementById('anno_scolastico');
-        if (anno && !anno.value) {
-            formShowErr(anno, 'err_anno_scolastico', <?= json_encode($L['classi_err_anno']) ?>); valid = false;
-        } else if (anno) {
-            formClearErr(anno, 'err_anno_scolastico');
-        }
-
+        if (anno && !anno.value) { formShowErr(anno, 'err_anno_scolastico', <?= json_encode($L['classi_err_anno']) ?>); valid = false; }
+        else if (anno) { formClearErr(anno, 'err_anno_scolastico'); }
         if (!valid) e.preventDefault();
     });
 })();
