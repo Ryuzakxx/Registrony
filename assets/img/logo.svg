@@ -1,42 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none" aria-label="Registrony - ITT Fermi" role="img">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" aria-label="ITT Fermi - Registrony" role="img">
 
-  <!-- Sfondo tile -->
-  <rect width="56" height="56" rx="12" fill="#0f1e30"/>
+  <!-- Sfondo -->
+  <rect width="48" height="48" rx="10" fill="#1a56b0"/>
 
-  <!-- Ingranaggio esterno dentato -->
-  <path d="
-    M28 6
-    L30.2 9.8 L34.5 8.9 L35.5 13.2 L39.6 14.2 L38.2 18.3
-    L42 20.8 L39.6 24.5 L42 28.5 L38 30.5
-    L39 34.8 L34.7 35.8 L33.8 40.1 L29.5 39.2
-    L28 43 L26.5 39.2 L22.2 40.1 L21.3 35.8
-    L17 34.8 L18 30.5 L14 28.5 L16.4 24.5
-    L14 20.8 L17.8 18.3 L16.4 14.2 L20.5 13.2
-    L21.5 8.9 L25.8 9.8 Z
-  " fill="#1a56b0" stroke="#1a56b0" stroke-width="0.5" stroke-linejoin="round"/>
+  <!-- Ingranaggio semplificato (8 denti) -->
+  <circle cx="24" cy="24" r="20" fill="#1a56b0"/>
 
-  <!-- Cerchio interno bianco (come logo originale) -->
-  <circle cx="28" cy="25" r="14" fill="#ffffff"/>
-  <circle cx="28" cy="25" r="13" fill="#f0f4ff"/>
+  <!-- Denti ingranaggio -->
+  <rect x="21" y="2" width="6" height="6" rx="1.5" fill="#ffffff"/>
+  <rect x="21" y="40" width="6" height="6" rx="1.5" fill="#ffffff"/>
+  <rect x="2" y="21" width="6" height="6" rx="1.5" fill="#ffffff"/>
+  <rect x="40" y="21" width="6" height="6" rx="1.5" fill="#ffffff"/>
 
-  <!-- Antenna parabolica -->
-  <path d="M23 21 Q28 14.5 33 21" stroke="#1a56b0" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-  <path d="M24.8 22.8 Q28 17.5 31.2 22.8" stroke="#1a56b0" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-  <!-- Palo antenna -->
-  <line x1="28" y1="23" x2="28" y2="31" stroke="#1a3a6b" stroke-width="1.6" stroke-linecap="round"/>
-  <!-- Base palo -->
-  <line x1="25" y1="31" x2="31" y2="31" stroke="#1a3a6b" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- Denti diagonali -->
+  <rect x="6.5" y="7.5" width="6" height="6" rx="1.5" fill="#ffffff" transform="rotate(45 9.5 10.5)"/>
+  <rect x="35.5" y="7.5" width="6" height="6" rx="1.5" fill="#ffffff" transform="rotate(45 38.5 10.5)"/>
+  <rect x="6.5" y="34.5" width="6" height="6" rx="1.5" fill="#ffffff" transform="rotate(45 9.5 37.5)"/>
+  <rect x="35.5" y="34.5" width="6" height="6" rx="1.5" fill="#ffffff" transform="rotate(45 38.5 37.5)"/>
 
-  <!-- Squadra tecnica (basso sinistra) -->
-  <path d="M18.5 28.5 L18.5 34 L24 34" stroke="#1a56b0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <!-- Angolo retto marcatore -->
-  <path d="M18.5 30.5 L20.5 30.5 L20.5 28.5" stroke="#1a56b0" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Cerchio interno bianco -->
+  <circle cx="24" cy="24" r="15" fill="#ffffff"/>
 
-  <!-- Martello (basso destra, ispirato logo Fermi) -->
-  <rect x="31" y="29" width="6" height="2.5" rx="0.8" fill="#1a56b0"/>
-  <rect x="33" y="31.5" width="2" height="3.5" rx="0.6" fill="#1a3a6b"/>
-
-  <!-- Testo FERMI nell'ingranaggio in basso -->
-  <text x="28" y="47" font-family="Arial, Helvetica, sans-serif" font-size="5" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1.8">FERMI</text>
+  <!-- Lettera F bold centrata -->
+  <text x="24" y="32" font-family="Arial Black, Arial, sans-serif" font-size="22" font-weight="900" fill="#1a56b0" text-anchor="middle">F</text>
 
 </svg>
