@@ -64,12 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 mysqli_query($conn, "INSERT INTO firme_sessioni (id_sessione, id_docente, tipo_presenza) VALUES ($sessId, $docenteCompresenza, 'compresenza')");
             }
 
-            // Salva i materiali usati nella sessione
-            foreach ($materialiUsati as $idMat) {
-                if ($idMat > 0) {
-                    mysqli_query($conn, "INSERT INTO sessioni_materiali (id_sessione, id_materiale) VALUES ($sessId, $idMat)");
-                }
-            }
+            /*
+             * Nota: nella nuova sessione registriamo solo "quali materiali sono stati usati"
+             * senza specificare la quantita. La quantita esatta si inserisce nel dettaglio.
+             * Il checkbox serve come promemoria rapido; la deduzione della quantita avviene
+             * nella pagina dettaglio con il form dedicato.
+             */
 
             mysqli_commit($conn);
             header('Location: ' . BASE_PATH . '/pages/sessioni/dettaglio.php?id=' . $sessId . '&success=' . urlencode($L['sess_ok_creata']));
@@ -84,24 +84,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $currentUserId = getCurrentUserId();
 
 /* ================================================================
+   Carica i materiali per ogni laboratorio in formato JSON
+   (usato dal JS per filtrare dinamicamente)
+   ================================================================ */
+$resMat = mysqli_query($conn, "
+    SELECT m.id, m.nome, m.unita_misura, m.quantita_disponibile, m.id_laboratorio
+    FROM materiali m
+    WHERE m.attivo = 1
+    ORDER BY m.nome
+");
+$materialiPerLab = [];
+while ($row = mysqli_fetch_assoc($resMat)) {
+    $materialiPerLab[$row['id_laboratorio']][] = $row;
+}
+
+/* ================================================================
    Include header.php SOLO dopo tutti i possibili redirect
    ================================================================ */
 $pageTitle = 'Nuova Sessione';
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/form_helpers.php';
-
-/* Carica materiali disponibili per il laboratorio selezionato */
-$materialiDisponibili = [];
-$idLabSel = intval($_POST['id_laboratorio'] ?? 0);
-if ($idLabSel) {
-    $resMat = mysqli_query($conn, "SELECT id, nome, unita_misura, quantita_disponibile FROM materiali WHERE id_laboratorio = $idLabSel AND attivo = 1 ORDER BY nome");
-    while ($row = mysqli_fetch_assoc($resMat)) $materialiDisponibili[] = $row;
-} else {
-    // Carica tutti i materiali attivi se non c'e' ancora filtro lab
-    $resMat = mysqli_query($conn, "SELECT m.id, m.nome, m.unita_misura, m.quantita_disponibile, l.nome AS laboratorio FROM materiali m JOIN laboratori l ON m.id_laboratorio = l.id WHERE m.attivo = 1 ORDER BY l.nome, m.nome");
-    while ($row = mysqli_fetch_assoc($resMat)) $materialiDisponibili[] = $row;
-}
-$materialiSelezionati = array_map('intval', $_POST['materiali_usati'] ?? []);
 
 /* Mappe select */
 $labsMap = ['' => $L['sess_seleziona_lab']];
@@ -218,57 +220,6 @@ foreach ($docenti as $doc) {
             ]);
             ?>
 
-            <!-- ================================================
-                 MATERIALI USATI DURANTE LA SESSIONE
-                 ================================================ -->
-            <div class="form-group" style="margin-top: 8px;">
-                <label style="font-weight:600; font-size:12.5px; margin-bottom:8px; display:block;">
-                    Materiali utilizzati
-                    <span style="font-weight:400; color:var(--text-light); margin-left:4px;">(opzionale — seleziona tutti i materiali usati)</span>
-                </label>
-
-                <?php if (empty($materialiDisponibili)): ?>
-                    <p class="text-muted" style="font-size:13px;">Nessun materiale disponibile. Aggiungili prima dalla sezione Gestione Materiali.</p>
-                <?php else: ?>
-                    <div id="materialiGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:8px;">
-                        <?php foreach ($materialiDisponibili as $mat): ?>
-                            <?php $checked = in_array($mat['id'], $materialiSelezionati); ?>
-                            <label class="mat-check-item <?= $checked ? 'selected' : '' ?>" style="
-                                display:flex; align-items:center; gap:10px;
-                                padding: 10px 14px;
-                                border: 1px solid var(--border);
-                                border-radius: 7px;
-                                cursor: pointer;
-                                background: var(--bg-white);
-                                transition: all 0.15s ease;
-                                user-select: none;
-                            ">
-                                <input type="checkbox"
-                                       name="materiali_usati[]"
-                                       value="<?= $mat['id'] ?>"
-                                       <?= $checked ? 'checked' : '' ?>
-                                       style="width:16px; height:16px; accent-color: var(--accent); flex-shrink:0;">
-                                <div>
-                                    <div style="font-weight:600; font-size:13px; color:var(--text);">
-                                        <?= htmlspecialchars($mat['nome']) ?>
-                                    </div>
-                                    <div style="font-size:11px; color:var(--text-light);">
-                                        <?php if (isset($mat['laboratorio'])): ?>
-                                            <?= htmlspecialchars($mat['laboratorio']) ?> &mdash;
-                                        <?php endif; ?>
-                                        Disponibili: <strong><?= $mat['quantita_disponibile'] ?? 'n.d.' ?></strong>
-                                        <?php if ($mat['unita_misura']): ?>
-                                            <?= htmlspecialchars($mat['unita_misura']) ?>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                    <p class="form-text" style="margin-top:6px;">I materiali selezionati vengono registrati come utilizzati in questa sessione.</p>
-                <?php endif; ?>
-            </div>
-
             <div class="d-flex gap-2" style="margin-top:16px;">
                 <button type="submit" class="btn btn-success" id="btnSubmit">
                     <?= htmlspecialchars($L['sess_btn_registra']) ?>
@@ -277,25 +228,17 @@ foreach ($docenti as $doc) {
                     <?= htmlspecialchars($L['annulla']) ?>
                 </a>
             </div>
+
+            <p class="form-text" style="margin-top:8px;">
+                Dopo aver creato la sessione potrai aggiungere i materiali utilizzati con le relative quantita dalla pagina di dettaglio.
+            </p>
         </form>
     </div>
 </div>
 
 <?php formFieldScripts(); ?>
 
-<style>
-.mat-check-item:hover { border-color: var(--accent); background: #f0f7ff; }
-.mat-check-item.selected { border-color: var(--accent); background: #eff6ff; }
-</style>
-
 <script>
-/* Evidenzia le card selezionate */
-document.querySelectorAll('.mat-check-item input[type=checkbox]').forEach(function(cb) {
-    cb.addEventListener('change', function() {
-        this.closest('.mat-check-item').classList.toggle('selected', this.checked);
-    });
-});
-
 /* Validazione form */
 (function () {
     const form   = document.getElementById('formNuovaSessione');
