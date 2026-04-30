@@ -7,28 +7,81 @@ requireLogin();
 require_once __DIR__ . '/../../config/app.php';
 require_once __DIR__ . '/../../config/database.php';
 
-$conn   = getConnection();
-$L      = lang(); // reads locale from session automatically
+$conn = getConnection();
+$L    = lang();
 $errors = [];
 
-$resLabs    = mysqli_query($conn, "SELECT id, nome, aula FROM laboratori WHERE attivo = 1 ORDER BY nome");
-$labs       = [];
-while ($row = mysqli_fetch_assoc($resLabs)) $labs[] = $row;
+/* ----------------------------------------------------------------
+   REGOLE DI ACCESSO
+   - tecnico  → non può creare sessioni
+   - docente  → deve aver selezionato un laboratorio;
+                può creare sessioni SOLO per quel laboratorio
+   - admin    → nessuna restrizione
+   ---------------------------------------------------------------- */
+if (isTecnico()) {
+    // I tecnici gestiscono materiali e segnalazioni, non aprono sessioni
+    header('Location: ' . BASE_PATH . '/pages/sessioni/index.php?error=' .
+        urlencode($L['sess_err_tecnico_no_create'] ?? 'I tecnici non possono creare nuove sessioni'));
+    exit;
+}
 
-$resClassi  = mysqli_query($conn, "SELECT id, nome, anno_scolastico FROM classi WHERE attivo = 1 ORDER BY nome");
-$classi     = [];
+$selectedLabId   = null;   // id lab selezionato (docente)
+$selectedLabInfo = null;   // ['nome', 'aula'] per la UI
+
+if (isDocente()) {
+    $selectedLabId = getSelectedLabId();
+    if (!$selectedLabId) {
+        // Il docente non ha ancora scelto un lab → forzalo a scegliere
+        header('Location: ' . BASE_PATH . '/pages/seleziona_laboratorio.php');
+        exit;
+    }
+    // Carica info lab per la visualizzazione bloccata
+    $resLab = mysqli_query($conn, "SELECT nome, aula FROM laboratori WHERE id = $selectedLabId AND attivo = 1 LIMIT 1");
+    $selectedLabInfo = mysqli_fetch_assoc($resLab);
+    if (!$selectedLabInfo) {
+        // Lab non più valido → forza ri-selezione
+        unset($_SESSION['selected_lab_id']);
+        header('Location: ' . BASE_PATH . '/pages/seleziona_laboratorio.php');
+        exit;
+    }
+}
+
+/* ----------------------------------------------------------------
+   Carica dati per i <select> del form
+   ---------------------------------------------------------------- */
+// Labs: admin vede tutti, docente vede solo il suo selezionato
+if (isAdmin()) {
+    $resLabs = mysqli_query($conn, "SELECT id, nome, aula FROM laboratori WHERE attivo = 1 ORDER BY nome");
+    $labs = [];
+    while ($row = mysqli_fetch_assoc($resLabs)) $labs[] = $row;
+} else {
+    // docente: array con solo il lab selezionato (usato per i materiali JS)
+    $labs = [['id' => $selectedLabId, 'nome' => $selectedLabInfo['nome'], 'aula' => $selectedLabInfo['aula']]];
+}
+
+$resClassi = mysqli_query($conn, "SELECT id, nome, anno_scolastico FROM classi WHERE attivo = 1 ORDER BY nome");
+$classi    = [];
 while ($row = mysqli_fetch_assoc($resClassi)) $classi[] = $row;
 
 $resDocenti = mysqli_query($conn, "SELECT id, nome, cognome FROM utenti WHERE attivo = 1 ORDER BY cognome, nome");
 $docenti    = [];
 while ($row = mysqli_fetch_assoc($resDocenti)) $docenti[] = $row;
 
-// Current server date and time (used for validation)
 $today   = date('Y-m-d');
 $nowTime = date('H:i');
 
+/* ----------------------------------------------------------------
+   Gestione POST
+   ---------------------------------------------------------------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $idLab              = intval($_POST['id_laboratorio']      ?? 0);
+    // Sicurezza: per i docenti l'id_laboratorio è sempre quello della sessione,
+    // mai il valore inviato dal form (prevenzione manomissioni)
+    if (isDocente()) {
+        $idLab = $selectedLabId;
+    } else {
+        $idLab = intval($_POST['id_laboratorio'] ?? 0);
+    }
+
     $idClasse           = intval($_POST['id_classe']           ?? 0);
     $data               = $_POST['data']                       ?? '';
     $oraIngresso        = $_POST['ora_ingresso']               ?? '';
@@ -42,21 +95,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$idLab)    $errors[] = $L['sess_err_lab'];
     if (!$idClasse) $errors[] = $L['sess_err_classe'];
 
-    // Date: required, cannot be in the future
     if (!$data) {
         $errors[] = $L['sess_err_data'];
     } elseif ($data > $today) {
         $errors[] = $L['sess_err_data_futura'];
     }
 
-    // Entry time: required; if today, cannot be in the future
     if (!$oraIngresso) {
         $errors[] = $L['sess_err_ora_ingresso'];
     } elseif ($data === $today && $oraIngresso > $nowTime) {
         $errors[] = $L['sess_err_ora_ingresso_futura'] ?? ($L['sess_err_ora_ingresso'] . ' (future)');
     }
 
-    // Exit time: optional; if provided must be after entry AND not in the future when today
     if ($oraUscita) {
         if ($oraUscita <= $oraIngresso) {
             $errors[] = $L['sess_err_ora_uscita'];
@@ -100,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $currentUserId = getCurrentUserId();
 
 /* ================================================================
-   Load materials per lab as JSON for dynamic JS filtering
+   Materiali per lab come JSON per il filtro JS dinamico
    ================================================================ */
 $resMat = mysqli_query($conn, "
     SELECT m.id, m.nome, m.unita_misura, m.quantita_disponibile, m.id_laboratorio
@@ -114,7 +164,7 @@ while ($row = mysqli_fetch_assoc($resMat)) {
 }
 
 /* ================================================================
-   Include header ONLY after all possible redirects
+   Include header SOLO dopo tutti i possibili redirect
    ================================================================ */
 $pageTitle = $L['sess_titolo_nuova'];
 require_once __DIR__ . '/../../includes/header.php';
@@ -143,6 +193,7 @@ foreach ($docenti as $doc) {
 
 <?php if (!empty($errors)): ?>
     <div class="alert alert-danger">
+        <button class="alert-close" onclick="this.closest('.alert').remove()" aria-label="Chiudi">&times;</button>
         <?php foreach ($errors as $err): ?>
             <div><?= htmlspecialchars($err) ?></div>
         <?php endforeach; ?>
@@ -157,7 +208,33 @@ foreach ($docenti as $doc) {
         <form method="POST" id="formNuovaSessione" novalidate>
 
             <div class="form-row">
-                <?php if (empty($labs)): ?>
+
+                <?php if (isDocente()): ?>
+                    <?php
+                    /*
+                     * Docente: il laboratorio è bloccato sul valore della sessione.
+                     * Mostriamo un display visivo + campo hidden, con link per cambiare.
+                     */
+                    ?>
+                    <div class="form-group">
+                        <label><?= htmlspecialchars($L['sess_laboratorio'] ?? 'Laboratorio') ?></label>
+                        <div style="display:flex; align-items:center; gap:12px; padding:9px 13px;
+                                    border:1px solid var(--border); border-radius:6px;
+                                    background:var(--bg); font-size:14px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent);flex-shrink:0;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                            <strong><?= htmlspecialchars($selectedLabInfo['nome']) ?></strong>
+                            <span style="color:var(--text-light);">(<?= htmlspecialchars($selectedLabInfo['aula']) ?>)</span>
+                            <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php"
+                               style="margin-left:auto; font-size:12px; color:var(--accent);"
+                               title="Cambia laboratorio">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                Cambia laboratorio
+                            </a>
+                        </div>
+                        <input type="hidden" name="id_laboratorio" value="<?= intval($selectedLabId) ?>">
+                    </div>
+
+                <?php elseif (empty($labs)): ?>
                     <div class="alert alert-warning">
                         <?= htmlspecialchars($L['sess_nessun_lab']) ?>
                         <a href="<?= BASE_PATH ?>/pages/admin/laboratori.php"><?= $L['crea'] ?></a>.
@@ -264,13 +341,16 @@ foreach ($docenti as $doc) {
     form.addEventListener('submit', function (e) {
         let valid = true;
 
-        // Required selects
+        // Required selects (skip id_laboratorio per docente — è hidden)
         const checks = [
-            { id: 'id_laboratorio',   msg: <?= json_encode($L['sess_err_lab']) ?>,         check: v => !!v },
             { id: 'id_classe',        msg: <?= json_encode($L['sess_err_classe']) ?>,       check: v => !!v },
             { id: 'ora_ingresso',     msg: <?= json_encode($L['sess_err_ora_ingresso']) ?>, check: v => !!v },
             { id: 'docente_titolare', msg: <?= json_encode($L['sess_err_docente_tit']) ?>,  check: v => !!v },
         ];
+        <?php if (isAdmin()): ?>
+        checks.unshift({ id: 'id_laboratorio', msg: <?= json_encode($L['sess_err_lab']) ?>, check: v => !!v });
+        <?php endif; ?>
+
         checks.forEach(function (c) {
             const el = document.getElementById(c.id);
             if (!el) return;
