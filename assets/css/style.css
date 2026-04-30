@@ -379,7 +379,7 @@ a:hover { text-decoration: underline; }
     padding: 12px 20px;
     border-top: 1px solid var(--border);
     background: #f8fafc;
-    border-radius: 0 0 var(--radius) var(--radius);
+    border-radius: 0 0 var(--radius) var(--radius));
 }
 
 /* Stat Cards */
@@ -564,15 +564,16 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .badge-primary { background: var(--primary-light); color: var(--accent); }
 .badge-success { background: var(--success-light); color: var(--success); }
 .badge-warning { background: var(--warning-light); color: var(--warning); }
-.badge-danger { background: var(--danger-light); color: var(--danger); }
-.badge-info { background: var(--info-light); color: var(--info); }
+.badge-danger  { background: var(--danger-light);  color: var(--danger); }
+.badge-info    { background: var(--info-light);    color: var(--info); }
 .badge-secondary { background: #f1f5f9; color: var(--secondary); }
 
 /* ============================================================
    ALERTS
    ============================================================ */
 .alert {
-    padding: 13px 16px;
+    position: relative;          /* ancora per la × assoluta */
+    padding: 13px 42px 13px 16px; /* padding-right lascia spazio alla × */
     border-radius: 7px;
     margin-bottom: 16px;
     font-size: 13.5px;
@@ -586,23 +587,25 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .alert-warning { background: var(--warning-light); color: #92400e; border: 1px solid #fde68a; }
 .alert-info    { background: var(--info-light);    color: #155e75; border: 1px solid #a5f3fc; }
 
-/* Bottone × per chiudere l'alert */
+/* Bottone × — posizionato in alto a destra, colore uguale al testo dell'alert */
 .alert-close {
-    margin-left: auto;
-    flex-shrink: 0;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
     font-size: 20px;
     line-height: 1;
-    color: inherit;
-    opacity: 0.55;
-    padding: 2px 5px;
+    color: inherit;   /* eredita il colore del testo dell'alert */
+    opacity: 1;
+    padding: 2px 4px;
     border-radius: 4px;
     transition: opacity var(--transition), background var(--transition);
 }
 .alert-close:hover {
-    opacity: 1;
+    opacity: 0.7;
     background: rgba(0, 0, 0, 0.08);
 }
 
