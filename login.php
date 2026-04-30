@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/config/auth.php';
 
-// Se gia' loggato, vai alla dashboard
+// Se già loggato, vai alla dashboard
 if (isLoggedIn()) {
     header('Location: ' . BASE_PATH . '/index.php');
     exit;
@@ -20,25 +20,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userId = (int)$_SESSION['user_id'];
 
         if ($ruolo === 'docente') {
-            // Recupera i lab assegnati al docente
             $labs = getDocenteLabs($userId);
 
             if (count($labs) === 0) {
-                // Nessun lab assegnato: logout e mostra errore
-                logout();
-                $error = 'Il tuo account non ha laboratori assegnati. Contatta l&#39;amministratore.';
+                /*
+                 * Nessun lab assegnato.
+                 * NON usare logout() perché fa header(Location) + exit
+                 * prima che $error venga mostrato.
+                 * Svuotiamo la sessione manualmente e mostriamo il messaggio.
+                 */
+                session_unset();
+                $error = "Il tuo account non ha laboratori assegnati. Contatta l'amministratore.";
             } elseif (count($labs) === 1) {
-                // Un solo lab: selezione automatica
                 setSelectedLabId((int)$labs[0]['id']);
                 header('Location: ' . BASE_PATH . '/index.php');
                 exit;
             } else {
-                // Più lab: il docente deve scegliere
                 header('Location: ' . BASE_PATH . '/pages/seleziona_laboratorio.php');
                 exit;
             }
         } else {
-            // Admin e Tecnico vanno direttamente alla dashboard
+            // Admin e Tecnico → dashboard
             header('Location: ' . BASE_PATH . '/index.php');
             exit;
         }
@@ -67,7 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <?php if ($error): ?>
-            <div class="alert alert-danger">&#10060; <?= htmlspecialchars($error) ?></div>
+            <div class="alert alert-danger">
+                <button class="alert-close" onclick="this.closest('.alert').remove()" aria-label="Chiudi">&times;</button>
+                <?= htmlspecialchars($error) ?>
+            </div>
         <?php endif; ?>
 
         <form method="POST" action="">
