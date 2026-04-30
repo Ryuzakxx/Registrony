@@ -204,9 +204,15 @@ while ($row = mysqli_fetch_assoc($resDocLabs)) {
 <?php formFieldStyles(); ?>
 
 <?php if (isset($_GET['success'])): ?>
-    <div class="alert alert-success"><?= htmlspecialchars($_GET['success']) ?></div>
+    <div class="alert alert-success" role="alert">
+        <?= htmlspecialchars($_GET['success']) ?>
+        <button class="alert-close" onclick="this.closest('.alert').remove()" aria-label="Chiudi">&times;</button>
+    </div>
 <?php elseif (isset($_GET['error'])): ?>
-    <div class="alert alert-danger"><?= htmlspecialchars($_GET['error']) ?></div>
+    <div class="alert alert-danger" role="alert">
+        <?= htmlspecialchars($_GET['error']) ?>
+        <button class="alert-close" onclick="this.closest('.alert').remove()" aria-label="Chiudi">&times;</button>
+    </div>
 <?php endif; ?>
 
 <div class="card">
