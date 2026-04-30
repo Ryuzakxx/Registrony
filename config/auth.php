@@ -1,29 +1,14 @@
 <?php
-/**
- * Sistema di autenticazione - MySQLi procedurale
- *
- * RUOLI:
- *   admin   → accesso completo a tutto
- *   tecnico → gestisce i propri laboratori (id_assistente_tecnico nel lab)
- *   docente → vede i lab assegnati (docenti_laboratori);
- *             al login seleziona il lab su cui aprire il registro
- */
-
 session_start();
 
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/database.php';
-
-// ----------------------------------------------------------------
-// Login / Logout
-// ----------------------------------------------------------------
 
 function login(string $email, string $password): bool {
     $conn  = getConnection();
     $email = mysqli_real_escape_string($conn, $email);
     $result = mysqli_query($conn, "SELECT id, nome, cognome, email, password, ruolo, attivo FROM utenti WHERE email = '$email'");
     $user   = mysqli_fetch_assoc($result);
-
     if ($user && $user['attivo'] && $password === $user['password']) {
         $_SESSION['user_id']            = $user['id'];
         $_SESSION['user_nome']          = $user['nome'];
@@ -31,7 +16,7 @@ function login(string $email, string $password): bool {
         $_SESSION['user_email']         = $user['email'];
         $_SESSION['user_ruolo']         = $user['ruolo'];
         $_SESSION['user_nome_completo'] = $user['cognome'] . ' ' . $user['nome'];
-        unset($_SESSION['selected_lab_id']); // reset selezione lab ad ogni login
+        unset($_SESSION['selected_lab_id']);
         return true;
     }
     return false;
@@ -43,10 +28,6 @@ function logout(): void {
     header('Location: ' . BASE_PATH . '/login.php');
     exit;
 }
-
-// ----------------------------------------------------------------
-// Controlli di ruolo
-// ----------------------------------------------------------------
 
 function isLoggedIn(): bool {
     return isset($_SESSION['user_id']);
@@ -64,14 +45,6 @@ function isDocente(): bool {
     return isset($_SESSION['user_ruolo']) && $_SESSION['user_ruolo'] === 'docente';
 }
 
-// ----------------------------------------------------------------
-// Laboratori per ruolo
-// ----------------------------------------------------------------
-
-/**
- * Laboratori in cui l'utente è assistente tecnico.
- * Usato solo per il ruolo 'tecnico'.
- */
 function getTechnicianLabs(int $userId): array {
     $conn   = getConnection();
     $userId = intval($userId);
@@ -86,10 +59,6 @@ function getTechnicianLabs(int $userId): array {
     return $labs;
 }
 
-/**
- * Laboratori assegnati a un docente (tabella docenti_laboratori).
- * Restituisce anche il flag is_responsabile.
- */
 function getDocenteLabs(int $userId): array {
     $conn   = getConnection();
     $userId = intval($userId);
@@ -106,36 +75,19 @@ function getDocenteLabs(int $userId): array {
     return $labs;
 }
 
-// ----------------------------------------------------------------
-// Laboratorio selezionato (sessione docente)
-// ----------------------------------------------------------------
-
-/** Restituisce l'id del laboratorio selezionato dal docente, o null. */
 function getSelectedLabId(): ?int {
     return isset($_SESSION['selected_lab_id']) ? (int)$_SESSION['selected_lab_id'] : null;
 }
 
-/** Imposta il laboratorio attivo per la sessione del docente. */
 function setSelectedLabId(int $idLab): void {
     $_SESSION['selected_lab_id'] = $idLab;
 }
 
-// ----------------------------------------------------------------
-// Verifica accesso a un laboratorio
-// ----------------------------------------------------------------
-
-/**
- * Restituisce true se l'utente corrente può accedere al laboratorio.
- *   admin   → sempre
- *   tecnico → solo i lab di cui è assistente (id_assistente_tecnico)
- *   docente → solo i lab assegnati in docenti_laboratori
- */
 function canAccessLab(int $idLab): bool {
     if (isAdmin()) return true;
     $conn   = getConnection();
     $userId = intval($_SESSION['user_id'] ?? 0);
     if (!$userId || !$idLab) return false;
-
     if (isTecnico()) {
         $res = mysqli_query($conn, "
             SELECT 1 FROM laboratori
@@ -144,7 +96,6 @@ function canAccessLab(int $idLab): bool {
         ");
         return mysqli_num_rows($res) > 0;
     }
-
     if (isDocente()) {
         $res = mysqli_query($conn, "
             SELECT 1 FROM docenti_laboratori
@@ -153,14 +104,9 @@ function canAccessLab(int $idLab): bool {
         ");
         return mysqli_num_rows($res) > 0;
     }
-
     return false;
 }
 
-/**
- * Verifica se l'utente corrente è il responsabile del laboratorio indicato.
- * Admin e tecnico del lab bypassano il controllo.
- */
 function isResponsabileLab(int $idLab): bool {
     if (isAdmin()) return true;
     $conn   = getConnection();
@@ -174,18 +120,6 @@ function isResponsabileLab(int $idLab): bool {
     return mysqli_num_rows($res) > 0;
 }
 
-/**
- * Verifica se l'utente corrente può GESTIRE le segnalazioni di un laboratorio.
- *
- * Regola: tutti possono INVIARE segnalazioni, ma solo queste figure
- * possono cambiare stato, aggiungere note di risoluzione, ecc.:
- *   - admin               → sempre
- *   - responsabile del lab → docente nominato id_responsabile
- *   - assistente tecnico   → tecnico nominato id_assistente_tecnico
- *
- * Nota: un tecnico NON può essere responsabile (vincolo architetturale),
- * quindi le due condizioni sono sempre mutualmente esclusive per ruolo.
- */
 function canGestireSegnalazioni(int $idLab): bool {
     if (isAdmin()) return true;
     $conn   = getConnection();
@@ -200,16 +134,11 @@ function canGestireSegnalazioni(int $idLab): bool {
     return mysqli_num_rows($res) > 0;
 }
 
-/**
- * True se l'utente può gestire ALMENO un laboratorio.
- * Usato per mostrare/nascondere voci di menu.
- */
 function canManageAnyLab(): bool {
     if (isAdmin()) return true;
     $conn   = getConnection();
     $userId = intval($_SESSION['user_id'] ?? 0);
     if (!$userId) return false;
-
     if (isTecnico()) {
         $res = mysqli_query($conn, "
             SELECT 1 FROM laboratori
@@ -218,7 +147,6 @@ function canManageAnyLab(): bool {
         ");
         return mysqli_num_rows($res) > 0;
     }
-
     if (isDocente()) {
         $res = mysqli_query($conn, "
             SELECT 1 FROM docenti_laboratori dl
@@ -228,13 +156,8 @@ function canManageAnyLab(): bool {
         ");
         return mysqli_num_rows($res) > 0;
     }
-
     return false;
 }
-
-// ----------------------------------------------------------------
-// Guard functions (require*)
-// ----------------------------------------------------------------
 
 function requireLogin(): void {
     if (!isLoggedIn()) {
@@ -243,7 +166,6 @@ function requireLogin(): void {
     }
 }
 
-/** Solo admin. */
 function requireAdmin(): void {
     requireLogin();
     if (!isAdmin()) {
@@ -252,7 +174,6 @@ function requireAdmin(): void {
     }
 }
 
-/** Admin o tecnico. */
 function requireTecnicoOrAdmin(): void {
     requireLogin();
     if (!isAdmin() && !isTecnico()) {
@@ -261,10 +182,6 @@ function requireTecnicoOrAdmin(): void {
     }
 }
 
-/**
- * Per il docente: forza la selezione di un laboratorio.
- * Tecnico e admin non passano per questa pagina.
- */
 function requireLabSelected(): void {
     requireLogin();
     if (isDocente() && !getSelectedLabId()) {
@@ -273,10 +190,6 @@ function requireLabSelected(): void {
     }
 }
 
-/**
- * Richiede che l'utente abbia accesso al laboratorio $idLab.
- * Usa canAccessLab() internamente.
- */
 function requireLabAccess(int $idLab): void {
     requireLogin();
     if (!canAccessLab($idLab)) {
@@ -285,9 +198,6 @@ function requireLabAccess(int $idLab): void {
     }
 }
 
-/**
- * Richiede che l'utente sia admin OPPURE responsabile del laboratorio $idLab.
- */
 function requireResponsabileLab(int $idLab): void {
     requireLogin();
     if (!isResponsabileLab($idLab)) {
@@ -296,21 +206,17 @@ function requireResponsabileLab(int $idLab): void {
     }
 }
 
-// ----------------------------------------------------------------
-// Helpers utente corrente
-// ----------------------------------------------------------------
-
 function getCurrentUserId(): ?int {
     return isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 }
 
 function getCurrentUser(): array {
     return [
-        'id'            => $_SESSION['user_id']            ?? null,
-        'nome'          => $_SESSION['user_nome']           ?? '',
-        'cognome'       => $_SESSION['user_cognome']        ?? '',
-        'email'         => $_SESSION['user_email']          ?? '',
-        'ruolo'         => $_SESSION['user_ruolo']          ?? '',
-        'nome_completo' => $_SESSION['user_nome_completo']  ?? '',
+        'id'            => $_SESSION['user_id']           ?? null,
+        'nome'          => $_SESSION['user_nome']          ?? '',
+        'cognome'       => $_SESSION['user_cognome']       ?? '',
+        'email'         => $_SESSION['user_email']         ?? '',
+        'ruolo'         => $_SESSION['user_ruolo']         ?? '',
+        'nome_completo' => $_SESSION['user_nome_completo'] ?? '',
     ];
 }
