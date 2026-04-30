@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'crea') {
         $nome     = capitalizzaNome($_POST['nome']    ?? '');
         $cognome  = capitalizzaNome($_POST['cognome'] ?? '');
-        $email    = trim($_POST['email']    ?? '');
+        $email    = strtolower(trim($_POST['email']   ?? ''));
         $password = $_POST['password']      ?? '';
         $ruolo    = in_array($_POST['ruolo'] ?? '', ['admin','docente','tecnico']) ? $_POST['ruolo'] : 'docente';
         $telefono = trim($_POST['telefono'] ?? '');
@@ -31,6 +31,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (strlen($password) < 6)                                   $errors[] = $L['utenti_err_pwd'];
         if ($telefono && !preg_match('/^[0-9\s\+\-\.()]{7,25}$/', $telefono)) $errors[] = $L['utenti_err_tel'];
 
+        // Pre-check email già registrata (evita eccezione da UNIQUE KEY)
+        if (empty($errors)) {
+            $e_safe = mysqli_real_escape_string($conn, $email);
+            $dup = mysqli_query($conn, "SELECT id FROM utenti WHERE email = '$e_safe' LIMIT 1");
+            if (mysqli_num_rows($dup) > 0) {
+                $errors[] = $L['utenti_err_email_uso'];
+            }
+        }
+
         if (empty($errors)) {
             $n_e  = mysqli_real_escape_string($conn, $nome);
             $c_e  = mysqli_real_escape_string($conn, $cognome);
@@ -38,20 +47,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $p_e  = mysqli_real_escape_string($conn, $password);
             $r_e  = mysqli_real_escape_string($conn, $ruolo);
             $t_SQL = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
-            $ok = mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_e','$r_e',$t_SQL)");
-            if ($ok) { header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?success=' . urlencode($L['utenti_ok_creato']));   exit; }
-            else     { header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?error='   . urlencode($L['utenti_err_email_uso'])); exit; }
+            mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_e','$r_e',$t_SQL)");
+            header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?success=' . urlencode($L['utenti_ok_creato']));
         } else {
             header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?error=' . urlencode(implode(' | ', $errors)));
-            exit;
         }
+        exit;
     }
 
     if ($action === 'modifica') {
         $id       = intval($_POST['id']      ?? 0);
         $nome     = capitalizzaNome($_POST['nome']    ?? '');
         $cognome  = capitalizzaNome($_POST['cognome'] ?? '');
-        $email    = trim($_POST['email']     ?? '');
+        $email    = strtolower(trim($_POST['email']   ?? ''));
         $ruolo    = in_array($_POST['ruolo'] ?? '', ['admin','docente','tecnico']) ? $_POST['ruolo'] : 'docente';
         $telefono = trim($_POST['telefono']  ?? '');
         $attivo   = isset($_POST['attivo'])  ? 1 : 0;
@@ -64,6 +72,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL))   $errors[] = $L['utenti_err_email'];
         if ($newPass && strlen($newPass) < 6)                        $errors[] = $L['utenti_err_pwd'];
         if ($telefono && !preg_match('/^[0-9\s\+\-\.()]{7,25}$/', $telefono)) $errors[] = $L['utenti_err_tel'];
+
+        // Pre-check email già usata da un altro utente
+        if (empty($errors) && $id) {
+            $e_safe = mysqli_real_escape_string($conn, $email);
+            $dup = mysqli_query($conn, "SELECT id FROM utenti WHERE email = '$e_safe' AND id != $id LIMIT 1");
+            if (mysqli_num_rows($dup) > 0) {
+                $errors[] = $L['utenti_err_email_uso'];
+            }
+        }
 
         // Vincolo: un tecnico NON può essere responsabile di un laboratorio
         if ($ruolo === 'tecnico') {
@@ -89,7 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Gestisci assegnazione laboratori: solo per docenti
-            // Cancella sempre le vecchie assegnazioni (se ruolo cambia da docente → le perderà giustamente)
             mysqli_query($conn, "DELETE FROM docenti_laboratori WHERE id_docente=$id");
             if ($ruolo === 'docente' && !empty($labIds)) {
                 foreach ($labIds as $labId) {
@@ -187,6 +203,12 @@ while ($row = mysqli_fetch_assoc($resDocLabs)) {
 
 <?php formFieldStyles(); ?>
 
+<?php if (isset($_GET['success'])): ?>
+    <div class="alert alert-success"><?= htmlspecialchars($_GET['success']) ?></div>
+<?php elseif (isset($_GET['error'])): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars($_GET['error']) ?></div>
+<?php endif; ?>
+
 <div class="card">
     <div class="card-header">
         <h3><?= $isEdit ? htmlspecialchars($L['utenti_form_titolo_mod']) : htmlspecialchars($L['utenti_form_titolo_crea']) ?></h3>
@@ -267,7 +289,6 @@ while ($row = mysqli_fetch_assoc($resDocLabs)) {
 
             <div class="form-row">
                 <?php
-                // Ruolo: tutti e 3 i ruoli disponibili
                 $ruoloOptions = [
                     ''        => $L['seleziona'],
                     'docente' => $L['utenti_ruolo_docente'] ?? 'Docente',
@@ -291,12 +312,6 @@ while ($row = mysqli_fetch_assoc($resDocLabs)) {
                 <?php formCheckbox('attivo', $L['utenti_attivo_label'], (bool)$editUser['attivo']); ?>
             <?php endif; ?>
 
-            <!-- ============================================================
-                 SEZIONE ASSEGNAZIONE LABORATORI (solo per docenti)
-                 Visibile dinamicamente via JS in base al ruolo selezionato.
-                 I tecnici vengono invece associati ai lab dal pannello Laboratori
-                 tramite il campo id_assistente_tecnico.
-                 ============================================================ -->
             <div id="labAssignSection" style="display:<?= ($isEdit && $editUser['ruolo'] === 'docente') ? 'block' : 'none' ?>; margin-top:1.5rem;">
                 <hr style="margin-bottom:1rem; border:none; border-top:1px solid var(--border,#e0e0e0);">
                 <h4 style="margin-bottom:.5rem; font-size:1rem; font-weight:600; display:flex; align-items:center; gap:.4rem;">
@@ -435,8 +450,6 @@ while ($row = mysqli_fetch_assoc($resDocLabs)) {
 <style>
 .pwd-toggle-btn { position:absolute; right:32px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:15px; color:var(--text-light,#888); padding:4px; line-height:1; }
 .pwd-toggle-btn:hover { color:var(--primary,#01696f); }
-
-/* Griglia checkbox lab */
 .lab-checkboxes-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:.45rem; margin-bottom:.5rem; }
 .lab-checkbox-item { display:flex; align-items:center; gap:.5rem; padding:.45rem .75rem; background:var(--bg-light,#f9f9f9); border:1.5px solid var(--border,#e0e0e0); border-radius:6px; cursor:pointer; transition:border-color .15s, background .15s; user-select:none; }
 .lab-checkbox-item:hover { border-color:var(--primary,#01696f); background:#f0f8f8; }
@@ -444,8 +457,6 @@ while ($row = mysqli_fetch_assoc($resDocLabs)) {
 .lab-checkbox-item input[type=checkbox]:checked ~ .lab-checkbox-nome { color:var(--primary,#01696f); }
 .lab-checkbox-nome { font-weight:600; font-size:.88rem; flex:1; }
 .lab-checkbox-aula { font-size:.75rem; color:var(--text-light,#888); white-space:nowrap; }
-
-/* Tag lab nella tabella */
 .lab-tags { display:flex; flex-wrap:wrap; gap:.25rem; }
 .lab-tag { font-size:.72rem; padding:2px 8px; border-radius:20px; background:#e8f4f4; color:#01696f; border:1px solid #c5e0e0; white-space:nowrap; }
 .lab-tag-resp { background:#fef9e7; color:#b8860b; border-color:#f0d060; }
@@ -456,7 +467,7 @@ while ($row = mysqli_fetch_assoc($resDocLabs)) {
 <?php formFieldScripts(); ?>
 
 <script>
-/* Auto-capitalizza mentre si scrive: "mario" → "Mario", "maria grazia" → "Maria Grazia" */
+/* Auto-capitalizza mentre si scrive */
 (function () {
     function titleCase(str) {
         return str.replace(/\b(\w)/g, function(ch) { return ch.toUpperCase(); });
@@ -475,7 +486,7 @@ while ($row = mysqli_fetch_assoc($resDocLabs)) {
     });
 })();
 
-/* Mostra/nascondi sezione assegnazione lab in base al ruolo selezionato */
+/* Mostra/nascondi sezione assegnazione lab */
 (function () {
     const sel     = document.getElementById('selectRuolo');
     const section = document.getElementById('labAssignSection');
@@ -484,7 +495,7 @@ while ($row = mysqli_fetch_assoc($resDocLabs)) {
         section.style.display = sel.value === 'docente' ? 'block' : 'none';
     }
     sel.addEventListener('change', toggle);
-    toggle(); // stato iniziale
+    toggle();
 })();
 
 (function () {
