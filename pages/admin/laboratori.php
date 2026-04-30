@@ -1,7 +1,4 @@
 <?php
-/* ================================================================
-   ACTIONS — devono stare PRIMA di qualsiasi output (header.php)
-   ================================================================ */
 require_once __DIR__ . '/../../config/auth.php';
 requireAdmin();
 
@@ -143,9 +140,7 @@ if (isset($_GET['edit'])) {
                 <div class="form-group">
                     <label>
                         Assistente Tecnico *
-                        <small class="text-muted">(ruolo: tecnico)</small>
-                        <span class="badge badge-warning" style="font-size:10px;vertical-align:middle;"
-                              title="Ogni laboratorio deve avere un assistente tecnico assegnato">obbligatorio</span>
+                        <small class="text-muted">(tecnico)</small>
                     </label>
                     <select name="id_assistente_tecnico" class="form-control" required>
                         <option value="">-- Seleziona tecnico --</option>
@@ -160,17 +155,12 @@ if (isset($_GET['edit'])) {
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </select>
-                    <div class="field-hint">
-                        Un tecnico può essere assistente di più laboratori contemporaneamente.
-                    </div>
                 </div>
 
                 <div class="form-group">
                     <label>
                         Responsabile *
                         <small class="text-muted">(docente)</small>
-                        <span class="badge badge-warning" style="font-size:10px;vertical-align:middle;"
-                              title="Ogni laboratorio deve sempre avere un responsabile">obbligatorio</span>
                     </label>
                     <select name="id_responsabile" class="form-control" required>
                         <option value="">-- Seleziona docente --</option>
@@ -185,10 +175,6 @@ if (isset($_GET['edit'])) {
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </select>
-                    <div class="field-hint">
-                        Un docente può non essere responsabile (accede solo come docente ordinario),
-                        ma ogni laboratorio deve avere sempre un responsabile assegnato.
-                    </div>
                 </div>
             </div>
 
