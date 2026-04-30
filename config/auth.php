@@ -218,5 +218,11 @@ function getCurrentUser(): array {
         'email'         => $_SESSION['user_email']         ?? '',
         'ruolo'         => $_SESSION['user_ruolo']         ?? '',
         'nome_completo' => $_SESSION['user_nome_completo'] ?? '',
+        'id'            => $_SESSION['user_id']           ?? null,
+        'nome'          => $_SESSION['user_nome']          ?? '',
+        'cognome'       => $_SESSION['user_cognome']       ?? '',
+        'email'         => $_SESSION['user_email']         ?? '',
+        'ruolo'         => $_SESSION['user_ruolo']         ?? '',
+        'nome_completo' => $_SESSION['user_nome_completo'] ?? '',
     ];
 }
