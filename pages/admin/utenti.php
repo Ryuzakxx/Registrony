@@ -41,13 +41,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors)) {
-            $n_e  = mysqli_real_escape_string($conn, $nome);
-            $c_e  = mysqli_real_escape_string($conn, $cognome);
-            $e_e  = mysqli_real_escape_string($conn, $email);
-            $p_e  = mysqli_real_escape_string($conn, $password);
-            $r_e  = mysqli_real_escape_string($conn, $ruolo);
-            $t_SQL = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
-            mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_e','$r_e',$t_SQL)");
+            $n_e      = mysqli_real_escape_string($conn, $nome);
+            $c_e      = mysqli_real_escape_string($conn, $cognome);
+            $e_e      = mysqli_real_escape_string($conn, $email);
+            $r_e      = mysqli_real_escape_string($conn, $ruolo);
+            $t_SQL    = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
+            $hash     = password_hash($password, PASSWORD_DEFAULT);
+            $p_hash   = mysqli_real_escape_string($conn, $hash);
+            $hasHash  = hasUserColumn($conn, 'password_hash');
+            $hasPlain = hasUserColumn($conn, 'password');
+
+            if ($hasHash && $hasPlain) {
+                mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password_hash, password, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_hash','$p_hash','$r_e',$t_SQL)");
+            } elseif ($hasHash) {
+                mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password_hash, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_hash','$r_e',$t_SQL)");
+            } else {
+                mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_hash','$r_e',$t_SQL)");
+            }
             header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?success=' . urlencode($L['utenti_ok_creato']));
         } else {
             header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?error=' . urlencode(implode(' | ', $errors)));
@@ -99,8 +109,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $r_e  = mysqli_real_escape_string($conn, $ruolo);
             $t_SQL = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
             if ($newPass) {
-                $p_e = mysqli_real_escape_string($conn, $newPass);
-                mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', password='$p_e', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
+                $hash      = password_hash($newPass, PASSWORD_DEFAULT);
+                $p_hash    = mysqli_real_escape_string($conn, $hash);
+                $hasHash   = hasUserColumn($conn, 'password_hash');
+                $hasPlain  = hasUserColumn($conn, 'password');
+
+                if ($hasHash && $hasPlain) {
+                    mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', password_hash='$p_hash', password='$p_hash', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
+                } elseif ($hasHash) {
+                    mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', password_hash='$p_hash', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
+                } else {
+                    mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', password='$p_hash', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
+                }
             } else {
                 mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
             }

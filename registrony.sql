@@ -14,24 +14,25 @@ USE registrony;
 --                   può essere responsabile di un lab
 -- ============================================================
 CREATE TABLE utenti (
-    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    nome       VARCHAR(100) NOT NULL,
-    cognome    VARCHAR(100) NOT NULL,
-    email      VARCHAR(255) NOT NULL UNIQUE,
-    password   VARCHAR(255) NOT NULL,
-    ruolo      ENUM('admin','docente','tecnico') NOT NULL DEFAULT 'docente',
-    telefono   VARCHAR(20) DEFAULT NULL,
-    attivo     BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nome         VARCHAR(100) NOT NULL,
+    cognome      VARCHAR(100) NOT NULL,
+    email        VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    password     VARCHAR(255) NOT NULL,
+    ruolo        ENUM('admin','docente','tecnico') NOT NULL DEFAULT 'docente',
+    telefono     VARCHAR(20) DEFAULT NULL,
+    attivo       BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
-INSERT INTO utenti (id, nome, cognome, email, password, ruolo, telefono) VALUES
-(1, 'Daniele', 'Signorile',  'daniele.signorile@itsff.it', 'cambiami2026', 'admin',   '333-1111111'),
-(2, 'Mario',   'Rossi',      'mario.rossi@scuola.it',      'admin123',     'admin',   '333-2222222'),
-(3, 'Luigi',   'Bianchi',    'luigi.bianchi@scuola.it',    'admin456',     'admin',   '333-3333333'),
-(4, 'Elena',   'Torricelli', 'elena.torricelli@itsff.it',  'tecnico2026',  'tecnico', '333-4444444'),
-(5, 'Roberto', 'Boyle',      'roberto.boyle@itsff.it',     'docente1',     'docente', NULL);
+INSERT INTO utenti (id, nome, cognome, email, password_hash, password, ruolo, telefono) VALUES
+(1, 'Daniele', 'Signorile',  'daniele.signorile@itsff.it',  '$2y$10$cKPIQ9CtwzE2Ofd4IssESuFPT1ZGNZ1v80eqqYUWhthJC5GP.e78O', '$2y$10$cKPIQ9CtwzE2Ofd4IssESuFPT1ZGNZ1v80eqqYUWhthJC5GP.e78O', 'admin',   '333-1111111'),
+(2, 'Mario',   'Rossi',      'mario.rossi@scuola.it',       '$2y$10$k.r3NrnU6Y4r/8YT7SWe/ONxlQYLb895TKAoPXRtfnuGRHD7azdi6', '$2y$10$k.r3NrnU6Y4r/8YT7SWe/ONxlQYLb895TKAoPXRtfnuGRHD7azdi6', 'admin',   '333-2222222'),
+(3, 'Luigi',   'Bianchi',    'luigi.bianchi@scuola.it',     '$2y$10$ZeoGHoiR5lbQ9qTWjFCvPO1L54RIGcO0YmfFxGMgTCBSx85lDT532', '$2y$10$ZeoGHoiR5lbQ9qTWjFCvPO1L54RIGcO0YmfFxGMgTCBSx85lDT532', 'admin',   '333-3333333'),
+(4, 'Elena',   'Torricelli', 'elena.torricelli@itsff.it',   '$2y$10$WgakvRt24Bkt5spnaHA9JeOAFioQw9RC//f/oB3GvDdpUjcqaHpou', '$2y$10$WgakvRt24Bkt5spnaHA9JeOAFioQw9RC//f/oB3GvDdpUjcqaHpou', 'tecnico', '333-4444444'),
+(5, 'Roberto', 'Boyle',      'roberto.boyle@itsff.it',      '$2y$10$tr3dZNpum/8/j3t/iYr4pOUnZQiHrLjAFrmnU4FlBg/BqZpU5y9Ha', '$2y$10$tr3dZNpum/8/j3t/iYr4pOUnZQiHrLjAFrmnU4FlBg/BqZpU5y9Ha', 'docente', NULL);
 
 -- ============================================================
 -- LABORATORI
