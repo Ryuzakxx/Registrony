@@ -173,6 +173,12 @@ class ResocontoPDF extends FPDF
     public string $periodoLabel = '';
     public string $labLabel     = '';
 
+    /** Restituisce il margine sinistro (lMargin è protected in FPDF). */
+    public function getLeftMargin(): float  { return $this->lMargin; }
+
+    /** Restituisce il margine destro (rMargin è protected in FPDF). */
+    public function getRightMargin(): float { return $this->rMargin; }
+
     function Header(): void
     {
         $this->SetTextColor(0, 0, 0);
@@ -237,7 +243,7 @@ if (empty($sessioni)) {
     $pdf->Cell(0, 6, _u('RIEPILOGO'), 0, 1, 'L');
     $pdf->SetDrawColor(200, 215, 240);
     $pdf->SetLineWidth(0.3);
-    $pdf->Line($pdf->lMargin, $pdf->GetY(), $pdf->GetPageWidth() - $pdf->rMargin, $pdf->GetY());
+    $pdf->Line($pdf->getLeftMargin(), $pdf->GetY(), $pdf->GetPageWidth() - $pdf->getRightMargin(), $pdf->GetY());
     $pdf->Ln(2);
 
     $colW = ($pdf->GetPageWidth() - 30) / 3;
@@ -255,7 +261,7 @@ if (empty($sessioni)) {
 
     $pdf->SetTextColor(0, 0, 0);
     $pdf->SetDrawColor(200, 215, 240);
-    $pdf->Line($pdf->lMargin, $pdf->GetY(), $pdf->GetPageWidth() - $pdf->rMargin, $pdf->GetY());
+    $pdf->Line($pdf->getLeftMargin(), $pdf->GetY(), $pdf->GetPageWidth() - $pdf->getRightMargin(), $pdf->GetY());
     $pdf->SetDrawColor(0, 0, 0);
     $pdf->SetLineWidth(0.2);
     $pdf->Ln(5);
@@ -287,7 +293,7 @@ if (empty($sessioni)) {
             $orario .= ' (in corso)';
         }
 
-        $larghezza = $pdf->GetPageWidth() - $pdf->lMargin - $pdf->rMargin;
+        $larghezza = $pdf->GetPageWidth() - $pdf->getLeftMargin() - $pdf->getRightMargin();
         $pdf->Cell($larghezza * 0.55, 7,
             _u("  #{$s['id']}  |  {$dataFmt}  |  {$s['lab_nome']} ({$s['aula']})"),
             0, 0, 'L', true);
@@ -299,7 +305,7 @@ if (empty($sessioni)) {
         $pdf->SetFillColor(255, 255, 255);
 
         // Docenti
-        $pdf->SetX($pdf->lMargin);
+        $pdf->SetX($pdf->getLeftMargin());
         $pdf->SetFont('Arial', 'B', 8.5);
         $pdf->Cell(35, $lineH, _u('Docenti:'), 0, 0);
         $pdf->SetFont('Arial', '', 8.5);
@@ -309,30 +315,30 @@ if (empty($sessioni)) {
                 $parts[] = $d['cognome'] . ' ' . $d['nome'] . ' (' . $d['tipo_presenza'] . ')';
             }
             $x = $pdf->GetX();
-            $w = $pdf->GetPageWidth() - $pdf->rMargin - $x;
+            $w = $pdf->GetPageWidth() - $pdf->getRightMargin() - $x;
             $pdf->MultiCell($w, $lineH, _u(implode(', ', $parts)));
         } else {
             $pdf->Cell(0, $lineH, _u('Non registrati'), 0, 1);
         }
 
         // Attivita svolta
-        $pdf->SetX($pdf->lMargin);
+        $pdf->SetX($pdf->getLeftMargin());
         $pdf->SetFont('Arial', 'B', 8.5);
         $pdf->Cell(35, $lineH, _u('Attivita svolta:'), 0, 0);
         $pdf->SetFont('Arial', '', 8.5);
         $x = $pdf->GetX();
-        $w = $pdf->GetPageWidth() - $pdf->rMargin - $x;
+        $w = $pdf->GetPageWidth() - $pdf->getRightMargin() - $x;
         $pdf->MultiCell($w, $lineH, _u($s['attivita_svolta'] ?: '-'));
 
         // Materiali usati
         if (!empty($s['materiali'])) {
-            $pdf->SetX($pdf->lMargin);
+            $pdf->SetX($pdf->getLeftMargin());
             $pdf->SetFont('Arial', 'B', 8.5);
             $pdf->Cell(0, $lineH, _u('Materiali utilizzati:'), 0, 1);
 
             $pdf->SetFillColor(210, 225, 245);
             $pdf->SetFont('Arial', 'B', 8);
-            $pdf->SetX($pdf->lMargin + 5);
+            $pdf->SetX($pdf->getLeftMargin() + 5);
             $pdf->Cell(78, 5, _u('Materiale'),    0, 0, 'L', true);
             $pdf->Cell(27, 5, _u('Qta usata'),    0, 0, 'C', true);
             $pdf->Cell(27, 5, _u('Unita misura'), 0, 0, 'C', true);
@@ -342,7 +348,7 @@ if (empty($sessioni)) {
             $altRow = false;
             foreach ($s['materiali'] as $mat) {
                 $pdf->SetFillColor($altRow ? 245 : 255, $altRow ? 249 : 255, 255);
-                $pdf->SetX($pdf->lMargin + 5);
+                $pdf->SetX($pdf->getLeftMargin() + 5);
                 $pdf->Cell(78, 5, _u($mat['nome']),                    0, 0, 'L', $altRow);
                 $pdf->Cell(27, 5, _u((string)$mat['quantita_usata']), 0, 0, 'C', $altRow);
                 $pdf->Cell(27, 5, _u($mat['unita_misura']),            0, 0, 'C', $altRow);
@@ -354,13 +360,13 @@ if (empty($sessioni)) {
 
         // Note aggiuntive
         if (!empty(trim($s['note'] ?? ''))) {
-            $pdf->SetX($pdf->lMargin);
+            $pdf->SetX($pdf->getLeftMargin());
             $pdf->SetFont('Arial', 'B', 8.5);
             $pdf->Cell(35, $lineH, _u('Note:'), 0, 0);
             $pdf->SetFont('Arial', 'I', 8.5);
             $pdf->SetTextColor(80, 80, 80);
             $x = $pdf->GetX();
-            $w = $pdf->GetPageWidth() - $pdf->rMargin - $x;
+            $w = $pdf->GetPageWidth() - $pdf->getRightMargin() - $x;
             $pdf->MultiCell($w, $lineH, _u($s['note']));
             $pdf->SetTextColor(0, 0, 0);
         }
@@ -368,7 +374,7 @@ if (empty($sessioni)) {
         // Separatore tra sessioni
         $pdf->SetDrawColor(200, 215, 240);
         $pdf->SetLineWidth(0.2);
-        $pdf->Line($pdf->lMargin, $pdf->GetY(), $pdf->GetPageWidth() - $pdf->rMargin, $pdf->GetY());
+        $pdf->Line($pdf->getLeftMargin(), $pdf->GetY(), $pdf->GetPageWidth() - $pdf->getRightMargin(), $pdf->GetY());
         $pdf->SetDrawColor(0, 0, 0);
         $pdf->Ln(4);
     }
@@ -381,7 +387,7 @@ if (empty($sessioni)) {
     $pdf->Cell(0, 8, _u('STATISTICHE PERIODO'), 0, 1, 'L');
     $pdf->SetDrawColor(20, 80, 150);
     $pdf->SetLineWidth(0.5);
-    $pdf->Line($pdf->lMargin, $pdf->GetY(), $pdf->GetPageWidth() - $pdf->rMargin, $pdf->GetY());
+    $pdf->Line($pdf->getLeftMargin(), $pdf->GetY(), $pdf->GetPageWidth() - $pdf->getRightMargin(), $pdf->GetY());
     $pdf->SetLineWidth(0.2);
     $pdf->SetDrawColor(0, 0, 0);
     $pdf->Ln(5);
