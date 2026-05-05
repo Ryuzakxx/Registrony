@@ -78,17 +78,17 @@ if (!$canReport && isDocente()) {
 
         <nav class="sidebar-nav">
             <?php if ($activeLab): ?>
-            <div class="nav-section" style="margin-top:0">Registro attivo</div>
+            <div class="nav-section" style="margin-top:0"><?= L('nav_registro_attivo') ?></div>
             <div style="padding:0 .5rem .5rem;">
                 <div style="background:#e8f4f4;border:1px solid #b6d9d8;border-radius:8px;padding:.6rem .8rem;">
                     <div style="font-weight:700;font-size:.9rem;color:#01696f"><?= htmlspecialchars($activeLab['nome']) ?></div>
-                    <div style="font-size:.75rem;color:#777;margin-top:2px">Aula: <?= htmlspecialchars($activeLab['aula']) ?>
-                        <?php if ($activeLab['is_resp']): ?>&nbsp;&bull;&nbsp;<span style="color:#01696f;font-weight:600">★ Responsabile</span><?php endif; ?>
+                    <div style="font-size:.75rem;color:#777;margin-top:2px"><?= L('label_aula') ?>: <?= htmlspecialchars($activeLab['aula']) ?>
+                        <?php if ($activeLab['is_resp']): ?>&nbsp;&bull;&nbsp;<span style="color:#01696f;font-weight:600"><?= L('label_responsabile') ?></span><?php endif; ?>
                     </div>
                 </div>
                 <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php"
                    style="display:block;margin-top:.4rem;font-size:.78rem;color:#01696f;text-align:center;text-decoration:none;">
-                    &#8646; Cambia laboratorio
+                    <?= L('nav_cambia_lab') ?>
                 </a>
             </div>
             <?php endif; ?>
@@ -123,14 +123,14 @@ if (!$canReport && isDocente()) {
             <?php if ($canGestMateriali): ?>
             <a href="<?= BASE_PATH ?>/pages/materiali/gestione.php<?= ($activeLab && getSelectedLabId()) ? '?laboratorio=' . (int)getSelectedLabId() : '' ?>" class="<?= $currentPage === 'gestione' && strpos($_SERVER['PHP_SELF'], 'materiali') !== false ? 'active' : '' ?>">
                 <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
-                Gestione Materiali
+                <?= L('nav_gest_materiali') ?>
             </a>
             <?php endif; ?>
 
             <?php if ($canReport): ?>
             <a href="<?= BASE_PATH ?>/pages/report/index.php" class="<?= strpos($_SERVER['PHP_SELF'], '/report/') !== false ? 'active' : '' ?>">
                 <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
-                Report PDF
+                <?= L('nav_report') ?>
             </a>
             <?php endif; ?>
 
@@ -189,7 +189,7 @@ if (!$canReport && isDocente()) {
             <div class="header-actions">
                 <span class="text-muted"><?= date('d/m/Y') ?></span>
                 <?php if (isDocente() && $activeLab): ?>
-                    <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="lang-toggle" title="Cambia laboratorio">&#8646; Lab</a>
+                    <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="lang-toggle" title="<?= L('nav_cambia_lab') ?>"><?= L('nav_cambia_lab_short') ?></a>
                 <?php endif; ?>
                 <a href="<?= BASE_PATH ?>/lang/set_lang.php?lang=<?= urlencode($otherLang) ?>&redirect=<?= urlencode($currentUrl) ?>"
                    class="lang-toggle"

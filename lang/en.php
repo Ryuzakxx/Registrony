@@ -59,6 +59,12 @@ return [
     'nav_utenti'             => 'Users',
     'nav_classi'             => 'Classes',
     'nav_gest_materiali'     => 'Manage Materials',
+    'nav_registro_attivo'    => 'Active registry',
+    'nav_cambia_lab'         => '⇆ Change lab',
+    'nav_cambia_lab_short'   => '⇆ Lab',
+    'nav_report'             => 'PDF Report',
+    'label_aula'             => 'Room',
+    'label_responsabile'     => '★ Responsible',
 
     /* ------------------------------------------------------------------ */
     /* LOGIN                                                                */
