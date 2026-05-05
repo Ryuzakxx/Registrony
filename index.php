@@ -96,7 +96,7 @@ if (isDocente()) {
     $pastDates = [];
     while ($r = mysqli_fetch_assoc($resDates)) $pastDates[] = $r['data'];
 
-    $pageTitle = 'Registro — ' . htmlspecialchars($lab['nome']);
+    $pageTitle = L('nav_registro_attivo') . ' — ' . htmlspecialchars($lab['nome']);
     require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -109,16 +109,16 @@ if (isDocente()) {
         <div>
             <div class="registro-lab-nome"><?= htmlspecialchars($lab['nome']) ?></div>
             <div class="registro-lab-meta">
-                Aula: <strong><?= htmlspecialchars($lab['aula']) ?></strong>
+                <?= L('label_aula') ?>: <strong><?= htmlspecialchars($lab['aula']) ?></strong>
                 <?php if ($isResponsabile): ?>
-                    &nbsp;&#183;&nbsp;<span class="badge-resp">&#9733; Responsabile</span>
+                    &nbsp;&#183;&nbsp;<span class="badge-resp"><?= L('label_responsabile') ?></span>
                 <?php endif; ?>
             </div>
         </div>
     </div>
     <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="btn btn-secondary btn-sm">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-        Cambia laboratorio
+        <?= L('nav_cambia_lab') ?>
     </a>
 </div>
 
@@ -130,7 +130,7 @@ if (isDocente()) {
         </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totS ?></div>
-            <div class="stat-label">Sessioni oggi</div>
+            <div class="stat-label"><?= L('dash_sessioni_oggi') ?></div>
         </div>
     </div>
     <div class="stat-card">
@@ -139,7 +139,7 @@ if (isDocente()) {
         </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totSgn ?></div>
-            <div class="stat-label">Segnalazioni aperte</div>
+            <div class="stat-label"><?= L('dash_segnalazioni_aperte') ?></div>
         </div>
     </div>
     <div class="stat-card">
@@ -148,7 +148,7 @@ if (isDocente()) {
         </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totMat ?></div>
-            <div class="stat-label">Materiali in esaurimento</div>
+            <div class="stat-label"><?= L('dash_mat_esaurimento') ?></div>
         </div>
     </div>
 </div>
@@ -158,20 +158,20 @@ if (isDocente()) {
     <div class="card-header">
         <h3>
             <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <?= $isToday ? 'Sessioni di oggi' : 'Sessioni del ' . date('d/m/Y', strtotime($viewDate)) ?>
+            <?= $isToday ? L('dash_sessioni_oggi_titolo') : L('sess_titolo_dettaglio') . ' ' . date('d/m/Y', strtotime($viewDate)) ?>
         </h3>
         <div class="d-flex gap-2 align-center flex-wrap">
             <!-- Navigazione storico -->
             <form method="GET" class="d-flex gap-1 align-center">
-                <label for="data" style="font-size:.82rem;color:#666;white-space:nowrap">&#128197; Data:</label>
+                <label for="data" style="font-size:.82rem;color:#666;white-space:nowrap">&#128197; <?= L('data') ?>:</label>
                 <input type="date" id="data" name="data" value="<?= htmlspecialchars($viewDate) ?>"
                     max="<?= $today ?>" class="form-control" style="width:145px;padding:4px 8px;font-size:.85rem">
-                <button type="submit" class="btn btn-secondary btn-sm">Vai</button>
+                <button type="submit" class="btn btn-secondary btn-sm"><?= L('filtra') ?></button>
                 <?php if (!$isToday): ?>
-                    <a href="<?= BASE_PATH ?>/index.php" class="btn btn-primary btn-sm">Oggi</a>
+                    <a href="<?= BASE_PATH ?>/index.php" class="btn btn-primary btn-sm"><?= L('dash_sessioni_oggi') ?></a>
                 <?php endif; ?>
             </form>
-            <a href="<?= BASE_PATH ?>/pages/sessioni/nuova.php" class="btn btn-primary btn-sm">+ Nuova</a>
+            <a href="<?= BASE_PATH ?>/pages/sessioni/nuova.php" class="btn btn-primary btn-sm"><?= L('sess_btn_nuova') ?></a>
         </div>
     </div>
     <div class="card-body">
@@ -180,8 +180,8 @@ if (isDocente()) {
                 <div class="empty-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 </div>
-                <h4>Nessuna sessione <?= $isToday ? 'oggi' : 'in questa data' ?></h4>
-                <p><?= $isToday ? 'Clicca "+ Nuova" per registrare la prima sessione della giornata.' : 'Non ci sono sessioni registrate per questa data.' ?></p>
+                <h4><?= $isToday ? L('dash_nessuna_sessione') : L('sess_nessuna') ?></h4>
+                <p><?= $isToday ? L('sess_nessuna_oggi') : L('sess_nessuna') ?></p>
             </div>
         <?php else: ?>
             <!-- Timeline registro -->
@@ -194,38 +194,38 @@ if (isDocente()) {
                             <span class="ora-sep">&#8595;</span>
                             <span class="ora-uscita"><?= htmlspecialchars(substr($s['ora_uscita'], 0, 5)) ?></span>
                         <?php else: ?>
-                            <span class="badge badge-success" style="font-size:.7rem;margin-top:4px">In corso</span>
+                            <span class="badge badge-success" style="font-size:.7rem;margin-top:4px"><?= L('sess_in_corso') ?></span>
                         <?php endif; ?>
                     </div>
                     <div class="registro-body">
                         <div class="registro-header-row">
                             <span class="badge badge-primary"><?= htmlspecialchars($s['classe']) ?></span>
-                            <a href="<?= BASE_PATH ?>/pages/sessioni/dettaglio.php?id=<?= $s['id'] ?>" class="btn btn-secondary btn-sm" style="padding:2px 10px;font-size:.78rem">Dettaglio</a>
+                            <a href="<?= BASE_PATH ?>/pages/sessioni/dettaglio.php?id=<?= $s['id'] ?>" class="btn btn-secondary btn-sm" style="padding:2px 10px;font-size:.78rem"><?= L('dettagli') ?></a>
                         </div>
                         <?php if (!empty($s['attivita_svolta'])): ?>
                             <div class="registro-attivita"><?= htmlspecialchars($s['attivita_svolta']) ?></div>
                         <?php endif; ?>
                         <?php if (!empty($s['note'])): ?>
-                            <div class="registro-note"><em>Note: <?= htmlspecialchars($s['note']) ?></em></div>
+                            <div class="registro-note"><em><?= L('note') ?>: <?= htmlspecialchars($s['note']) ?></em></div>
                         <?php endif; ?>
                         <!-- Firme -->
                         <div class="registro-firme">
                             <?php if (empty($s['firme'])): ?>
-                                <span class="firma-vuota">&#9995; Nessuna firma registrata</span>
+                                <span class="firma-vuota">&#9995; <?= L('firme_nessuna') ?></span>
                             <?php else: ?>
                                 <?php foreach ($s['firme'] as $f): ?>
                                     <?php
                                         $tipoClass = match($f['tipo']) {
-                                            'docente'          => 'firma-docente',
-                                            'tecnico'          => 'firma-tecnico',
-                                            'supplente'        => 'firma-supplente',
-                                            default            => 'firma-altro'
+                                            'docente'    => 'firma-docente',
+                                            'tecnico'    => 'firma-tecnico',
+                                            'supplente'  => 'firma-supplente',
+                                            default      => 'firma-altro'
                                         };
                                         $tipoLabel = match($f['tipo']) {
-                                            'docente'          => '&#9997; Docente',
-                                            'tecnico'          => '&#128296; Tecnico',
-                                            'supplente'        => '&#128100; Supplente',
-                                            default            => '&#128100; ' . htmlspecialchars($f['tipo'])
+                                            'docente'    => '&#9997; ' . L('firme_docente'),
+                                            'tecnico'    => '&#128296; ' . L('firme_tipo'),
+                                            'supplente'  => '&#128100; ' . L('sess_docente_compresenza'),
+                                            default      => '&#128100; ' . htmlspecialchars($f['tipo'])
                                         };
                                     ?>
                                     <span class="firma-chip <?= $tipoClass ?>">
@@ -246,9 +246,9 @@ if (isDocente()) {
         <!-- Mini-storico: ultime date con sessioni -->
         <?php if (!empty($pastDates)): ?>
             <div class="storico-mini">
-                <span class="storico-mini-label">&#128337; Storico rapido:</span>
+                <span class="storico-mini-label">&#128337; <?= L('sess_titolo_lista') ?>:</span>
                 <?php foreach ($pastDates as $d):
-                    if ($d === $today) continue; // già mostrato
+                    if ($d === $today) continue;
                 ?>
                     <a href="?data=<?= $d ?>" class="storico-chip <?= $viewDate === $d ? 'storico-chip-active' : '' ?>">
                         <?= date('d/m', strtotime($d)) ?>
@@ -264,11 +264,11 @@ if (isDocente()) {
     <div class="card-header">
         <h3>
             <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Segnalazioni aperte
+            <?= L('dash_segnalazioni_titolo') ?>
         </h3>
         <div class="d-flex gap-2">
-            <a href="<?= BASE_PATH ?>/pages/segnalazioni/nuova.php" class="btn btn-warning btn-sm">+ Segnala</a>
-            <a href="<?= BASE_PATH ?>/pages/segnalazioni/index.php" class="btn btn-secondary btn-sm">Vedi tutte</a>
+            <a href="<?= BASE_PATH ?>/pages/segnalazioni/nuova.php" class="btn btn-warning btn-sm"><?= L('segn_btn_nuova') ?></a>
+            <a href="<?= BASE_PATH ?>/pages/segnalazioni/index.php" class="btn btn-secondary btn-sm"><?= L('vedi_tutte') ?></a>
         </div>
     </div>
     <div class="card-body">
@@ -277,25 +277,34 @@ if (isDocente()) {
                 <div class="empty-icon" style="color:#22c55e">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <h4>Tutto ok! Nessuna segnalazione aperta.</h4>
+                <h4><?= L('dash_tutto_ok') ?></h4>
             </div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>Titolo</th><th>Priorità</th><th>Stato</th><th>Segnalato da</th><th>Data</th><th></th></tr></thead>
+                    <thead><tr>
+                        <th><?= L('segn_titolo_campo') ?></th>
+                        <th><?= L('segn_priorita') ?></th>
+                        <th><?= L('segn_stato') ?></th>
+                        <th><?= L('segn_segnalato_da') ?></th>
+                        <th><?= L('segn_data') ?></th>
+                        <th></th>
+                    </tr></thead>
                     <tbody>
                         <?php foreach ($segnalazioni as $sg): ?>
                         <?php
                             $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' };
                             $sc = $sg['stato'] === 'aperta' ? 'badge-danger' : 'badge-warning';
+                            $prioLabel = match($sg['priorita']) { 'urgente'=>L('segn_prio_urgente'),'alta'=>L('segn_prio_alta'),'media'=>L('segn_prio_media'),default=>L('segn_prio_bassa') };
+                            $statoLabel = match($sg['stato']) { 'aperta'=>L('segn_stato_aperta'),'in_lavorazione'=>L('segn_stato_in_lavorazione'),'risolta'=>L('segn_stato_risolta'),default=>L('segn_stato_chiusa') };
                         ?>
                         <tr>
                             <td><strong><?= htmlspecialchars($sg['titolo']) ?></strong></td>
-                            <td><span class="badge <?= $bc ?>"><?= $sg['priorita'] ?></span></td>
-                            <td><span class="badge <?= $sc ?>"><?= str_replace('_',' ',$sg['stato']) ?></span></td>
+                            <td><span class="badge <?= $bc ?>"><?= $prioLabel ?></span></td>
+                            <td><span class="badge <?= $sc ?>"><?= $statoLabel ?></span></td>
                             <td><?= htmlspecialchars($sg['segnalato_da']) ?></td>
                             <td><?= date('d/m/Y', strtotime($sg['data_segnalazione'])) ?></td>
-                            <td><a href="<?= BASE_PATH ?>/pages/segnalazioni/dettaglio.php?id=<?= $sg['id'] ?>" class="btn btn-primary btn-sm">Apri</a></td>
+                            <td><a href="<?= BASE_PATH ?>/pages/segnalazioni/dettaglio.php?id=<?= $sg['id'] ?>" class="btn btn-primary btn-sm"><?= L('dettagli') ?></a></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -310,10 +319,10 @@ if (isDocente()) {
     <div class="card-header">
         <h3>
             <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            Materiali del laboratorio
+            <?= L('mat_titolo_lista') ?>
         </h3>
         <?php if ($isResponsabile): ?>
-            <a href="<?= BASE_PATH ?>/pages/materiali/gestione.php?laboratorio=<?= $labId ?>" class="btn btn-primary btn-sm">&#128393; Gestisci</a>
+            <a href="<?= BASE_PATH ?>/pages/materiali/gestione.php?laboratorio=<?= $labId ?>" class="btn btn-primary btn-sm">&#128393; <?= L('mat_titolo_gest') ?></a>
         <?php endif; ?>
     </div>
     <div class="card-body">
@@ -322,9 +331,9 @@ if (isDocente()) {
                 <div class="empty-icon">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                 </div>
-                <h4>Nessun materiale registrato</h4>
+                <h4><?= L('mat_nessuno') ?></h4>
                 <?php if ($isResponsabile): ?>
-                    <p><a href="<?= BASE_PATH ?>/pages/materiali/gestione.php">Aggiungi il primo materiale</a></p>
+                    <p><a href="<?= BASE_PATH ?>/pages/materiali/gestione.php"><?= L('mat_btn_crea') ?></a></p>
                 <?php endif; ?>
             </div>
         <?php else: ?>
@@ -341,16 +350,16 @@ if (isDocente()) {
                             <strong><?= $m['quantita_disponibile'] ?></strong>
                             <span class="materiale-unita"><?= htmlspecialchars($m['unita_misura'] ?? '') ?></span>
                         <?php else: ?>
-                            <span style="color:#aaa">—</span>
+                            <span style="color:#aaa"><?= L('mat_stato_nd') ?></span>
                         <?php endif; ?>
                     </div>
                     <div class="materiale-stato">
                         <?php if ($stato === 'esaurito'): ?>
-                            <span class="badge badge-danger">Esaurito</span>
+                            <span class="badge badge-danger"><?= L('mat_stato_esaurito') ?></span>
                         <?php elseif ($stato === 'basso'): ?>
-                            <span class="badge badge-warning">In esaurimento</span>
+                            <span class="badge badge-warning"><?= L('mat_stato_esaurimento') ?></span>
                         <?php else: ?>
-                            <span class="badge badge-success">OK</span>
+                            <span class="badge badge-success"><?= L('mat_stato_ok') ?></span>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -434,7 +443,7 @@ if (isDocente()) {
 /* ================================================================
    VISTA GLOBALE — Admin / Tecnico
    ================================================================ */
-$pageTitle = 'Dashboard';
+$pageTitle = L('dash_titolo');
 
 /* Filtra per lab del tecnico se non è admin */
 $labFilter = '';
@@ -507,7 +516,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totLabs ?></div>
-            <div class="stat-label"><?= isTecnico() ? 'Miei laboratori' : 'Laboratori attivi' ?></div>
+            <div class="stat-label"><?= isTecnico() ? L('nav_laboratori') : L('dash_lab_attivi') ?></div>
         </div>
     </div>
     <div class="stat-card">
@@ -516,7 +525,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totSessioniOggi ?></div>
-            <div class="stat-label">Sessioni oggi</div>
+            <div class="stat-label"><?= L('dash_sessioni_oggi') ?></div>
         </div>
     </div>
     <div class="stat-card">
@@ -525,7 +534,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totSegnAperte ?></div>
-            <div class="stat-label">Segnalazioni aperte</div>
+            <div class="stat-label"><?= L('dash_segnalazioni_aperte') ?></div>
         </div>
     </div>
     <div class="stat-card">
@@ -534,7 +543,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <div class="stat-info">
             <div class="stat-value"><?= $totMatEsaurimento ?></div>
-            <div class="stat-label">Materiali in esaurimento</div>
+            <div class="stat-label"><?= L('dash_mat_esaurimento') ?></div>
         </div>
     </div>
 </div>
@@ -543,9 +552,9 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card-header">
         <h3>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Sessioni di oggi (<?= date('d/m/Y') ?>)
+            <?= L('dash_sessioni_oggi_titolo') ?> (<?= date('d/m/Y') ?>)
         </h3>
-        <a href="<?= BASE_PATH ?>/pages/sessioni/nuova.php" class="btn btn-primary btn-sm">+ Nuova Sessione</a>
+        <a href="<?= BASE_PATH ?>/pages/sessioni/nuova.php" class="btn btn-primary btn-sm"><?= L('sess_btn_nuova') ?></a>
     </div>
     <div class="card-body">
         <?php if (empty($sessioniOggi)): ?>
@@ -553,13 +562,21 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="empty-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </div>
-                <h4>Nessuna sessione oggi</h4>
-                <p>Non ci sono sessioni registrate per oggi.</p>
+                <h4><?= L('dash_nessuna_sessione') ?></h4>
+                <p><?= L('sess_nessuna_oggi') ?></p>
             </div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>Laboratorio</th><th>Aula</th><th>Classe</th><th>Ingresso</th><th>Uscita</th><th>Firme</th><th>Attività</th></tr></thead>
+                    <thead><tr>
+                        <th><?= L('sess_laboratorio') ?></th>
+                        <th><?= L('label_aula') ?></th>
+                        <th><?= L('sess_classe') ?></th>
+                        <th><?= L('sess_ora_ingresso') ?></th>
+                        <th><?= L('sess_ora_uscita') ?></th>
+                        <th><?= L('firme_titolo') ?></th>
+                        <th><?= L('sess_attivita') ?></th>
+                    </tr></thead>
                     <tbody>
                         <?php foreach ($sessioniOggi as $s): ?>
                         <tr>
@@ -567,7 +584,7 @@ require_once __DIR__ . '/includes/header.php';
                             <td><?= htmlspecialchars($s['aula']) ?></td>
                             <td><span class="badge badge-primary"><?= htmlspecialchars($s['classe']) ?></span></td>
                             <td><?= htmlspecialchars(substr($s['ora_ingresso'],0,5)) ?></td>
-                            <td><?= $s['ora_uscita'] ? htmlspecialchars(substr($s['ora_uscita'],0,5)) : '<span class="badge badge-success">In corso</span>' ?></td>
+                            <td><?= $s['ora_uscita'] ? htmlspecialchars(substr($s['ora_uscita'],0,5)) : '<span class="badge badge-success">' . L('sess_in_corso') . '</span>' ?></td>
                             <td><?= htmlspecialchars($s['docenti'] ?? '—') ?></td>
                             <td><?= htmlspecialchars(mb_strimwidth($s['attivita_svolta'] ?? '', 0, 60, '...')) ?></td>
                         </tr>
@@ -583,9 +600,9 @@ require_once __DIR__ . '/includes/header.php';
     <div class="card-header">
         <h3>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Segnalazioni aperte
+            <?= L('dash_segnalazioni_titolo') ?>
         </h3>
-        <a href="<?= BASE_PATH ?>/pages/segnalazioni/index.php" class="btn btn-secondary btn-sm">Vedi tutte</a>
+        <a href="<?= BASE_PATH ?>/pages/segnalazioni/index.php" class="btn btn-secondary btn-sm"><?= L('vedi_tutte') ?></a>
     </div>
     <div class="card-body">
         <?php if (empty($segnalazioni)): ?>
@@ -593,13 +610,20 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="empty-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <h4>Nessuna segnalazione aperta</h4>
-                <p>Tutto funziona correttamente.</p>
+                <h4><?= L('dash_tutto_ok') ?></h4>
+                <p><?= L('dash_nessuna_segn') ?></p>
             </div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>Titolo</th><th>Laboratorio</th><th>Priorità</th><th>Stato</th><th>Segnalato da</th><th>Data</th></tr></thead>
+                    <thead><tr>
+                        <th><?= L('segn_titolo_campo') ?></th>
+                        <th><?= L('sess_laboratorio') ?></th>
+                        <th><?= L('segn_priorita') ?></th>
+                        <th><?= L('segn_stato') ?></th>
+                        <th><?= L('segn_segnalato_da') ?></th>
+                        <th><?= L('segn_data') ?></th>
+                    </tr></thead>
                     <tbody>
                         <?php foreach ($segnalazioni as $sg): ?>
                         <tr>
@@ -607,9 +631,14 @@ require_once __DIR__ . '/includes/header.php';
                             <td><?= htmlspecialchars($sg['laboratorio']) ?></td>
                             <td>
                                 <?php $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' }; ?>
-                                <span class="badge <?= $bc ?>"><?= $sg['priorita'] ?></span>
+                                <?php $prioLabel = match($sg['priorita']) { 'urgente'=>L('segn_prio_urgente'),'alta'=>L('segn_prio_alta'),'media'=>L('segn_prio_media'),default=>L('segn_prio_bassa') }; ?>
+                                <span class="badge <?= $bc ?>"><?= $prioLabel ?></span>
                             </td>
-                            <td><span class="badge <?= $sg['stato']==='aperta' ? 'badge-danger' : 'badge-warning' ?>"><?= $sg['stato'] ?></span></td>
+                            <td>
+                                <?php $sc = match($sg['stato']) { 'aperta'=>'badge-danger','in_lavorazione'=>'badge-warning','risolta'=>'badge-success',default=>'badge-secondary' }; ?>
+                                <?php $statoLabel = match($sg['stato']) { 'aperta'=>L('segn_stato_aperta'),'in_lavorazione'=>L('segn_stato_in_lavorazione'),'risolta'=>L('segn_stato_risolta'),default=>L('segn_stato_chiusa') }; ?>
+                                <span class="badge <?= $sc ?>"><?= $statoLabel ?></span>
+                            </td>
                             <td><?= htmlspecialchars($sg['segnalato_da']) ?></td>
                             <td><?= date('d/m/Y', strtotime($sg['data_segnalazione'])) ?></td>
                         </tr>

@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'Segnalazioni';
+$pageTitle = L('segn_titolo_lista');
 require_once __DIR__ . '/../../includes/header.php';
 
 $conn   = getConnection();
@@ -67,9 +67,9 @@ if (isAdmin()) {
 <?php if ($labForzatoId): ?>
 <div class="lab-lock-banner">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    Segnalazioni di <strong><?= htmlspecialchars($labForzatoNome) ?></strong>
+    <?= L('segn_titolo_lista') ?> <strong><?= htmlspecialchars($labForzatoNome) ?></strong>
     &nbsp;···&nbsp;
-    <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="lab-lock-change">Cambia laboratorio</a>
+    <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="lab-lock-change"><?= L('nav_cambia_lab') ?></a>
 </div>
 <?php endif; ?>
 
@@ -77,20 +77,20 @@ if (isAdmin()) {
     <div class="card-body">
         <form method="GET" class="d-flex gap-2 align-center flex-wrap">
             <div class="form-group" style="margin-bottom:0">
-                <label>Stato</label>
+                <label><?= L('segn_filtra_stato') ?></label>
                 <select name="stato" class="form-control">
-                    <option value="">Tutti</option>
-                    <option value="aperta"         <?= $filtroStato==='aperta'         ? 'selected':'' ?>>Aperta</option>
-                    <option value="in_lavorazione"  <?= $filtroStato==='in_lavorazione' ? 'selected':'' ?>>In lavorazione</option>
-                    <option value="risolta"        <?= $filtroStato==='risolta'        ? 'selected':'' ?>>Risolta</option>
-                    <option value="chiusa"         <?= $filtroStato==='chiusa'         ? 'selected':'' ?>>Chiusa</option>
+                    <option value=""><?= L('tutti') ?></option>
+                    <option value="aperta"         <?= $filtroStato==='aperta'         ? 'selected':'' ?>><?= L('segn_stato_aperta') ?></option>
+                    <option value="in_lavorazione"  <?= $filtroStato==='in_lavorazione' ? 'selected':'' ?>><?= L('segn_stato_in_lavorazione') ?></option>
+                    <option value="risolta"        <?= $filtroStato==='risolta'        ? 'selected':'' ?>><?= L('segn_stato_risolta') ?></option>
+                    <option value="chiusa"         <?= $filtroStato==='chiusa'         ? 'selected':'' ?>><?= L('segn_stato_chiusa') ?></option>
                 </select>
             </div>
             <?php if (!empty($labs)): ?>
             <div class="form-group" style="margin-bottom:0">
-                <label>Laboratorio</label>
+                <label><?= L('segn_filtra_lab') ?></label>
                 <select name="laboratorio" class="form-control">
-                    <option value="">Tutti</option>
+                    <option value=""><?= L('tutti') ?></option>
                     <?php foreach ($labs as $lab): ?>
                         <option value="<?= $lab['id'] ?>" <?= $filtroLab==$lab['id'] ? 'selected':'' ?>><?= htmlspecialchars($lab['nome']) ?></option>
                     <?php endforeach; ?>
@@ -98,8 +98,8 @@ if (isAdmin()) {
             </div>
             <?php endif; ?>
             <div style="margin-top:22px">
-                <button type="submit" class="btn btn-primary btn-sm">Filtra</button>
-                <a href="<?= BASE_PATH ?>/pages/segnalazioni/index.php" class="btn btn-secondary btn-sm">Reset</a>
+                <button type="submit" class="btn btn-primary btn-sm"><?= L('filtra') ?></button>
+                <a href="<?= BASE_PATH ?>/pages/segnalazioni/index.php" class="btn btn-secondary btn-sm"><?= L('reset') ?></a>
             </div>
         </form>
     </div>
@@ -107,40 +107,44 @@ if (isAdmin()) {
 
 <div class="card">
     <div class="card-header">
-        <h3>&#9888; Segnalazioni (<?= count($segnalazioni) ?>)</h3>
-        <a href="<?= BASE_PATH ?>/pages/segnalazioni/nuova.php" class="btn btn-warning btn-sm">+ Nuova Segnalazione</a>
+        <h3>&#9888; <?= L('segn_titolo_lista') ?> (<?= count($segnalazioni) ?>)</h3>
+        <a href="<?= BASE_PATH ?>/pages/segnalazioni/nuova.php" class="btn btn-warning btn-sm"><?= L('segn_btn_nuova') ?></a>
     </div>
     <div class="card-body">
         <?php if (empty($segnalazioni)): ?>
-            <div class="empty-state"><div class="empty-icon">&#10004;</div><h4>Nessuna segnalazione trovata</h4></div>
+            <div class="empty-state"><div class="empty-icon">&#10004;</div><h4><?= L('segn_nessuna') ?></h4></div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Titolo</th>
-                            <?php if (!$labForzatoId): ?><th>Laboratorio</th><?php endif; ?>
-                            <th>Priorità</th><th>Stato</th><th>Segnalato da</th><th>Data</th><th></th>
+                            <th><?= L('segn_titolo_campo') ?></th>
+                            <?php if (!$labForzatoId): ?><th><?= L('segn_lab') ?></th><?php endif; ?>
+                            <th><?= L('segn_priorita') ?></th>
+                            <th><?= L('segn_stato') ?></th>
+                            <th><?= L('segn_segnalato_da') ?></th>
+                            <th><?= L('segn_data') ?></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($segnalazioni as $sg): ?>
+                        <?php
+                            $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' };
+                            $sc = match($sg['stato']) { 'aperta'=>'badge-danger','in_lavorazione'=>'badge-warning','risolta'=>'badge-success',default=>'badge-secondary' };
+                            $prioLabel  = match($sg['priorita']) { 'urgente'=>L('segn_prio_urgente'),'alta'=>L('segn_prio_alta'),'media'=>L('segn_prio_media'),default=>L('segn_prio_bassa') };
+                            $statoLabel = match($sg['stato']) { 'aperta'=>L('segn_stato_aperta'),'in_lavorazione'=>L('segn_stato_in_lavorazione'),'risolta'=>L('segn_stato_risolta'),default=>L('segn_stato_chiusa') };
+                        ?>
                         <tr>
                             <td><strong><?= htmlspecialchars($sg['titolo']) ?></strong></td>
                             <?php if (!$labForzatoId): ?>
                                 <td><?= htmlspecialchars($sg['laboratorio']) ?></td>
                             <?php endif; ?>
-                            <td>
-                                <?php $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' }; ?>
-                                <span class="badge <?= $bc ?>"><?= $sg['priorita'] ?></span>
-                            </td>
-                            <td>
-                                <?php $sc = match($sg['stato']) { 'aperta'=>'badge-danger','in_lavorazione'=>'badge-warning','risolta'=>'badge-success',default=>'badge-secondary' }; ?>
-                                <span class="badge <?= $sc ?>"><?= str_replace('_',' ',$sg['stato']) ?></span>
-                            </td>
+                            <td><span class="badge <?= $bc ?>"><?= $prioLabel ?></span></td>
+                            <td><span class="badge <?= $sc ?>"><?= $statoLabel ?></span></td>
                             <td><?= htmlspecialchars($sg['segnalato_da']) ?></td>
                             <td><?= date('d/m/Y', strtotime($sg['data_segnalazione'])) ?></td>
-                            <td><a href="<?= BASE_PATH ?>/pages/segnalazioni/dettaglio.php?id=<?= $sg['id'] ?>" class="btn btn-primary btn-sm">Dettagli</a></td>
+                            <td><a href="<?= BASE_PATH ?>/pages/segnalazioni/dettaglio.php?id=<?= $sg['id'] ?>" class="btn btn-primary btn-sm"><?= L('dettagli') ?></a></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
