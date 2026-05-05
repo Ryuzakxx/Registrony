@@ -200,8 +200,14 @@ if (!$canReport && isDocente()) {
         </header>
         <div class="page-content">
             <?php if (isset($_GET['success'])): ?>
-                <div class="alert alert-success" data-auto-dismiss><?= htmlspecialchars($_GET['success']) ?></div>
+                <div class="alert alert-success" data-auto-dismiss>
+                    <button class="alert-close" onclick="this.closest('.alert').remove()" aria-label="Chiudi">&times;</button>
+                    <?= htmlspecialchars($_GET['success']) ?>
+                </div>
             <?php endif; ?>
             <?php if (isset($_GET['error'])): ?>
-                <div class="alert alert-danger" data-auto-dismiss><?= htmlspecialchars($_GET['error']) ?></div>
+                <div class="alert alert-danger" data-auto-dismiss>
+                    <button class="alert-close" onclick="this.closest('.alert').remove()" aria-label="Chiudi">&times;</button>
+                    <?= htmlspecialchars($_GET['error']) ?>
+                </div>
             <?php endif; ?>
