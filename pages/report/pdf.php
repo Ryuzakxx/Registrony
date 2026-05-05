@@ -78,7 +78,6 @@ if ($labId) {
     $labFilter = "AND sl.id_laboratorio = $labId";
     $resLab    = mysqli_query($conn, "SELECT nome, aula FROM laboratori WHERE id = $labId");
     $labRow    = mysqli_fetch_assoc($resLab);
-    // Niente htmlspecialchars qui: il testo va nel PDF, non in HTML
     $labLabel  = $labRow ? $labRow['nome'] . ' - Aula ' . $labRow['aula'] : 'Laboratorio';
 } elseif (!isAdmin()) {
     $labFilter = "AND l.id_responsabile = $userId";
@@ -159,7 +158,6 @@ require_once __DIR__ . '/../../lib/fpdf/fpdf.php';
 
 /**
  * Converte stringa UTF-8 in ISO-8859-1 per FPDF core fonts.
- * Gestisce correttamente i caratteri italiani accentati.
  */
 function _u(string $text): string {
     $result = iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $text);
@@ -173,21 +171,19 @@ class ResocontoPDF extends FPDF
 
     function Header(): void
     {
-        // Reset colori ad ogni nuova pagina (evita che la barra blu della sessione
-        // precedente contamini l'header della pagina successiva)
         $this->SetTextColor(0, 0, 0);
         $this->SetFillColor(255, 255, 255);
         $this->SetDrawColor(0, 0, 0);
 
-        $this->SetFont('Helvetica', 'B', 16);
+        $this->SetFont('Arial', 'B', 16);
         $this->SetTextColor(20, 80, 150);
         $this->Cell(0, 9, _u('REGISTRONY'), 0, 1, 'C');
 
-        $this->SetFont('Helvetica', 'B', 11);
+        $this->SetFont('Arial', 'B', 11);
         $this->SetTextColor(50, 50, 50);
         $this->Cell(0, 6, _u('Resoconto Sessioni di Laboratorio'), 0, 1, 'C');
 
-        $this->SetFont('Helvetica', '', 9);
+        $this->SetFont('Arial', '', 9);
         $this->SetTextColor(90, 90, 90);
         $this->Cell(0, 5, _u($this->labLabel), 0, 1, 'C');
         $this->Cell(0, 5, _u($this->periodoLabel), 0, 1, 'C');
@@ -203,7 +199,7 @@ class ResocontoPDF extends FPDF
     function Footer(): void
     {
         $this->SetY(-13);
-        $this->SetFont('Helvetica', 'I', 8);
+        $this->SetFont('Arial', 'I', 8);
         $this->SetTextColor(150, 150, 150);
         $this->Cell(0, 5, _u('Generato il ' . date('d/m/Y H:i') . '   |   Pagina ' . $this->PageNo() . '/{nb}'), 0, 0, 'C');
     }
@@ -220,7 +216,7 @@ $pdf->SetAutoPageBreak(true, 20);
 $pdf->AddPage();
 
 if (empty($sessioni)) {
-    $pdf->SetFont('Helvetica', 'I', 11);
+    $pdf->SetFont('Arial', 'I', 11);
     $pdf->SetTextColor(130, 130, 130);
     $pdf->Ln(10);
     $pdf->Cell(0, 12, _u('Nessuna sessione trovata per il periodo selezionato.'), 0, 1, 'C');
@@ -232,7 +228,7 @@ if (empty($sessioni)) {
     $oreMin = $totaleOreMin % 60;
     $oreStr = $oreH > 0 ? "{$oreH}h {$oreMin}min" : "{$oreMin}min";
 
-    $pdf->SetFont('Helvetica', 'B', 9);
+    $pdf->SetFont('Arial', 'B', 9);
     $pdf->SetTextColor(20, 80, 150);
     $pdf->Cell(0, 6, _u('RIEPILOGO'), 0, 1, 'L');
     $pdf->SetDrawColor(200, 215, 240);
@@ -241,13 +237,13 @@ if (empty($sessioni)) {
     $pdf->Ln(2);
 
     $colW = ($pdf->GetPageWidth() - 30) / 3;
-    $pdf->SetFont('Helvetica', 'B', 8.5);
+    $pdf->SetFont('Arial', 'B', 8.5);
     $pdf->SetTextColor(60, 60, 60);
     $pdf->Cell($colW, 5.5, _u('Sessioni totali'), 0, 0, 'L');
     $pdf->Cell($colW, 5.5, _u('Ore totali registrate'), 0, 0, 'L');
     $pdf->Cell($colW, 5.5, _u('Docenti coinvolti'), 0, 1, 'L');
 
-    $pdf->SetFont('Helvetica', 'B', 13);
+    $pdf->SetFont('Arial', 'B', 13);
     $pdf->SetTextColor(20, 80, 150);
     $pdf->Cell($colW, 7, _u((string)$totale), 0, 0, 'L');
     $pdf->Cell($colW, 7, _u($oreStr), 0, 0, 'L');
@@ -264,7 +260,6 @@ if (empty($sessioni)) {
     foreach ($sessioni as $s) {
         $lineH = 5.5;
 
-        // Stima altezza blocco per decidere se iniziare nuova pagina
         $stimaAltezza = 7
             + $lineH
             + $lineH * 2
@@ -278,7 +273,7 @@ if (empty($sessioni)) {
         // ── Barra titolo sessione ──
         $pdf->SetFillColor(20, 80, 150);
         $pdf->SetTextColor(255, 255, 255);
-        $pdf->SetFont('Helvetica', 'B', 8.5);
+        $pdf->SetFont('Arial', 'B', 8.5);
 
         $dataFmt = date('d/m/Y', strtotime($s['data']));
         $orario  = substr($s['ora_ingresso'], 0, 5);
@@ -296,15 +291,14 @@ if (empty($sessioni)) {
             _u("Classe: {$s['classe_nome']}  |  {$orario}  "),
             0, 1, 'R', true);
 
-        // Reset colori dopo barra
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetFillColor(255, 255, 255);
 
         // Docenti
         $pdf->SetX($pdf->lMargin);
-        $pdf->SetFont('Helvetica', 'B', 8.5);
+        $pdf->SetFont('Arial', 'B', 8.5);
         $pdf->Cell(35, $lineH, _u('Docenti:'), 0, 0);
-        $pdf->SetFont('Helvetica', '', 8.5);
+        $pdf->SetFont('Arial', '', 8.5);
         if (!empty($s['docenti'])) {
             $parts = [];
             foreach ($s['docenti'] as $d) {
@@ -319,9 +313,9 @@ if (empty($sessioni)) {
 
         // Attivita svolta
         $pdf->SetX($pdf->lMargin);
-        $pdf->SetFont('Helvetica', 'B', 8.5);
+        $pdf->SetFont('Arial', 'B', 8.5);
         $pdf->Cell(35, $lineH, _u('Attivita svolta:'), 0, 0);
-        $pdf->SetFont('Helvetica', '', 8.5);
+        $pdf->SetFont('Arial', '', 8.5);
         $x = $pdf->GetX();
         $w = $pdf->GetPageWidth() - $pdf->rMargin - $x;
         $pdf->MultiCell($w, $lineH, _u($s['attivita_svolta'] ?: '-'));
@@ -329,18 +323,18 @@ if (empty($sessioni)) {
         // Materiali usati
         if (!empty($s['materiali'])) {
             $pdf->SetX($pdf->lMargin);
-            $pdf->SetFont('Helvetica', 'B', 8.5);
+            $pdf->SetFont('Arial', 'B', 8.5);
             $pdf->Cell(0, $lineH, _u('Materiali utilizzati:'), 0, 1);
 
             $pdf->SetFillColor(210, 225, 245);
-            $pdf->SetFont('Helvetica', 'B', 8);
+            $pdf->SetFont('Arial', 'B', 8);
             $pdf->SetX($pdf->lMargin + 5);
             $pdf->Cell(78, 5, _u('Materiale'),    0, 0, 'L', true);
             $pdf->Cell(27, 5, _u('Qta usata'),    0, 0, 'C', true);
             $pdf->Cell(27, 5, _u('Unita misura'), 0, 0, 'C', true);
             $pdf->Cell(0,  5, _u('Note'),          0, 1, 'L', true);
 
-            $pdf->SetFont('Helvetica', '', 8);
+            $pdf->SetFont('Arial', '', 8);
             $altRow = false;
             foreach ($s['materiali'] as $mat) {
                 $pdf->SetFillColor($altRow ? 245 : 255, $altRow ? 249 : 255, 255);
@@ -357,9 +351,9 @@ if (empty($sessioni)) {
         // Note aggiuntive
         if (!empty(trim($s['note'] ?? ''))) {
             $pdf->SetX($pdf->lMargin);
-            $pdf->SetFont('Helvetica', 'B', 8.5);
+            $pdf->SetFont('Arial', 'B', 8.5);
             $pdf->Cell(35, $lineH, _u('Note:'), 0, 0);
-            $pdf->SetFont('Helvetica', 'I', 8.5);
+            $pdf->SetFont('Arial', 'I', 8.5);
             $pdf->SetTextColor(80, 80, 80);
             $x = $pdf->GetX();
             $w = $pdf->GetPageWidth() - $pdf->rMargin - $x;
@@ -378,7 +372,7 @@ if (empty($sessioni)) {
     // ── Pagina statistiche finali ──
     $pdf->AddPage();
 
-    $pdf->SetFont('Helvetica', 'B', 12);
+    $pdf->SetFont('Arial', 'B', 12);
     $pdf->SetTextColor(20, 80, 150);
     $pdf->Cell(0, 8, _u('STATISTICHE PERIODO'), 0, 1, 'L');
     $pdf->SetDrawColor(20, 80, 150);
@@ -391,15 +385,15 @@ if (empty($sessioni)) {
 
     // Tabella docenti
     if (!empty($docenteCount)) {
-        $pdf->SetFont('Helvetica', 'B', 10);
+        $pdf->SetFont('Arial', 'B', 10);
         $pdf->SetTextColor(20, 80, 150);
         $pdf->Cell(0, 6, _u('Docenti per numero di sessioni'), 0, 1);
-        $pdf->SetFont('Helvetica', 'B', 8.5);
+        $pdf->SetFont('Arial', 'B', 8.5);
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetFillColor(210, 225, 245);
         $pdf->Cell(130, 5, _u('Docente'), 0, 0, 'L', true);
         $pdf->Cell(0,   5, _u('Sessioni'), 0, 1, 'C', true);
-        $pdf->SetFont('Helvetica', '', 8.5);
+        $pdf->SetFont('Arial', '', 8.5);
         $alt = false;
         foreach ($docenteCount as $nome => $cnt) {
             $pdf->SetFillColor($alt ? 245 : 255, $alt ? 249 : 255, 255);
@@ -412,15 +406,15 @@ if (empty($sessioni)) {
 
     // Tabella materiali top 10
     if (!empty($materialeCount)) {
-        $pdf->SetFont('Helvetica', 'B', 10);
+        $pdf->SetFont('Arial', 'B', 10);
         $pdf->SetTextColor(20, 80, 150);
-        $pdf->Cell(0, 6, _u('Materiali piu\' utilizzati (top 10)'), 0, 1);
-        $pdf->SetFont('Helvetica', 'B', 8.5);
+        $pdf->Cell(0, 6, _u("Materiali piu' utilizzati (top 10)"), 0, 1);
+        $pdf->SetFont('Arial', 'B', 8.5);
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetFillColor(210, 225, 245);
         $pdf->Cell(130, 5, _u('Materiale'), 0, 0, 'L', true);
         $pdf->Cell(0,   5, _u('Qta totale'), 0, 1, 'C', true);
-        $pdf->SetFont('Helvetica', '', 8.5);
+        $pdf->SetFont('Arial', '', 8.5);
         $alt = false;
         $top = 0;
         foreach ($materialeCount as $nome => $qta) {
