@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../../config/auth.php';
+requireLogin();
+
 $pageTitle = L('segn_titolo_lista');
 require_once __DIR__ . '/../../includes/header.php';
 
