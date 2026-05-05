@@ -158,10 +158,14 @@ require_once __DIR__ . '/../../lib/fpdf/fpdf.php';
 
 /**
  * Converte stringa UTF-8 in ISO-8859-1 per FPDF core fonts.
+ * Mantiene i caratteri accentati italiani (à, è, é, ì, ò, ù, ecc.)
+ * poiché ISO-8859-1 li supporta nativamente.
+ * Si usa //IGNORE invece di //TRANSLIT per evitare sostituzioni indesiderate.
  */
 function _u(string $text): string {
-    $result = iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $text);
-    return ($result !== false && $result !== '') ? $result : $text;
+    if ($text === '') return '';
+    $result = iconv('UTF-8', 'ISO-8859-1//IGNORE', $text);
+    return ($result !== false) ? $result : $text;
 }
 
 class ResocontoPDF extends FPDF
