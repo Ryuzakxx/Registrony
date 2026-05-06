@@ -58,12 +58,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= BASE_PATH ?>/assets/css/style.css">
+    <style>
+        .login-logo-img {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            margin-bottom: 8px;
+        }
+    </style>
 </head>
 <body>
 <div class="login-page">
     <div class="login-card">
         <div class="logo">
-            <div class="icon">&#128300;</div>
+            <img src="<?= BASE_PATH ?>/assets/img/logo.svg" alt="Registrony" class="login-logo-img">
             <h1>Registrony</h1>
             <p>del Laboratoriony</p>
         </div>
