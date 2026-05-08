@@ -159,6 +159,12 @@ function canManageAnyLab(): bool {
     return false;
 }
 
+function hasUserColumn(mysqli $conn, string $column): bool {
+    $col = mysqli_real_escape_string($conn, $column);
+    $res = mysqli_query($conn, "SHOW COLUMNS FROM utenti LIKE '$col'");
+    return $res && mysqli_num_rows($res) > 0;
+}
+
 function requireLogin(): void {
     if (!isLoggedIn()) {
         header('Location: ' . BASE_PATH . '/login.php');
@@ -212,12 +218,6 @@ function getCurrentUserId(): ?int {
 
 function getCurrentUser(): array {
     return [
-        'id'            => $_SESSION['user_id']           ?? null,
-        'nome'          => $_SESSION['user_nome']          ?? '',
-        'cognome'       => $_SESSION['user_cognome']       ?? '',
-        'email'         => $_SESSION['user_email']         ?? '',
-        'ruolo'         => $_SESSION['user_ruolo']         ?? '',
-        'nome_completo' => $_SESSION['user_nome_completo'] ?? '',
         'id'            => $_SESSION['user_id']           ?? null,
         'nome'          => $_SESSION['user_nome']          ?? '',
         'cognome'       => $_SESSION['user_cognome']       ?? '',

@@ -1,12 +1,11 @@
 <?php
-$pageTitle = 'Nuova Segnalazione';
-require_once __DIR__ . '/../../includes/header.php';
+/* ================================================================
+   POST logic before any HTML output
+   ================================================================ */
+require_once __DIR__ . '/../../config/auth.php';
+requireLogin();
 
 $conn = getConnection();
-
-$resLabs = mysqli_query($conn, "SELECT id, nome, aula FROM laboratori WHERE attivo = 1 ORDER BY nome");
-$labs    = [];
-while ($row = mysqli_fetch_assoc($resLabs)) $labs[] = $row;
 
 $errors = [];
 $preselectedLab      = intval($_GET['id_laboratorio'] ?? 0);
@@ -38,6 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 }
+
+$resLabs = mysqli_query($conn, "SELECT id, nome, aula FROM laboratori WHERE attivo = 1 ORDER BY nome");
+$labs    = [];
+while ($row = mysqli_fetch_assoc($resLabs)) $labs[] = $row;
+
+$pageTitle = 'Nuova Segnalazione';
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <?php if (!empty($errors)): ?>

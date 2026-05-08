@@ -19,27 +19,23 @@ $errors = [];
    - admin    → nessuna restrizione
    ---------------------------------------------------------------- */
 if (isTecnico()) {
-    // I tecnici gestiscono materiali e segnalazioni, non aprono sessioni
     header('Location: ' . BASE_PATH . '/pages/sessioni/index.php?error=' .
         urlencode($L['sess_err_tecnico_no_create'] ?? 'I tecnici non possono creare nuove sessioni'));
     exit;
 }
 
-$selectedLabId   = null;   // id lab selezionato (docente)
-$selectedLabInfo = null;   // ['nome', 'aula'] per la UI
+$selectedLabId   = null;
+$selectedLabInfo = null;
 
 if (isDocente()) {
     $selectedLabId = getSelectedLabId();
     if (!$selectedLabId) {
-        // Il docente non ha ancora scelto un lab → forzalo a scegliere
         header('Location: ' . BASE_PATH . '/pages/seleziona_laboratorio.php');
         exit;
     }
-    // Carica info lab per la visualizzazione bloccata
     $resLab = mysqli_query($conn, "SELECT nome, aula FROM laboratori WHERE id = $selectedLabId AND attivo = 1 LIMIT 1");
     $selectedLabInfo = mysqli_fetch_assoc($resLab);
     if (!$selectedLabInfo) {
-        // Lab non più valido → forza ri-selezione
         unset($_SESSION['selected_lab_id']);
         header('Location: ' . BASE_PATH . '/pages/seleziona_laboratorio.php');
         exit;
@@ -49,13 +45,11 @@ if (isDocente()) {
 /* ----------------------------------------------------------------
    Carica dati per i <select> del form
    ---------------------------------------------------------------- */
-// Labs: admin vede tutti, docente vede solo il suo selezionato
 if (isAdmin()) {
     $resLabs = mysqli_query($conn, "SELECT id, nome, aula FROM laboratori WHERE attivo = 1 ORDER BY nome");
     $labs = [];
     while ($row = mysqli_fetch_assoc($resLabs)) $labs[] = $row;
 } else {
-    // docente: array con solo il lab selezionato (usato per i materiali JS)
     $labs = [['id' => $selectedLabId, 'nome' => $selectedLabInfo['nome'], 'aula' => $selectedLabInfo['aula']]];
 }
 
@@ -74,8 +68,6 @@ $nowTime = date('H:i');
    Gestione POST
    ---------------------------------------------------------------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Sicurezza: per i docenti l'id_laboratorio è sempre quello della sessione,
-    // mai il valore inviato dal form (prevenzione manomissioni)
     if (isDocente()) {
         $idLab = $selectedLabId;
     } else {
@@ -103,15 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$oraIngresso) {
         $errors[] = $L['sess_err_ora_ingresso'];
-    } elseif ($data === $today && $oraIngresso > $nowTime) {
-        $errors[] = $L['sess_err_ora_ingresso_futura'] ?? ($L['sess_err_ora_ingresso'] . ' (future)');
     }
 
     if ($oraUscita) {
         if ($oraUscita <= $oraIngresso) {
             $errors[] = $L['sess_err_ora_uscita'];
-        } elseif ($data === $today && $oraUscita > $nowTime) {
-            $errors[] = $L['sess_err_ora_uscita_futura'] ?? ($L['sess_err_ora_uscita'] . ' (future)');
         }
     }
 
@@ -210,12 +198,6 @@ foreach ($docenti as $doc) {
             <div class="form-row">
 
                 <?php if (isDocente()): ?>
-                    <?php
-                    /*
-                     * Docente: il laboratorio è bloccato sul valore della sessione.
-                     * Mostriamo un display visivo + campo hidden, con link per cambiare.
-                     */
-                    ?>
                     <div class="form-group">
                         <label><?= htmlspecialchars($L['sess_laboratorio'] ?? 'Laboratorio') ?></label>
                         <div style="display:flex; align-items:center; gap:12px; padding:9px 13px;
@@ -335,13 +317,11 @@ foreach ($docenti as $doc) {
 (function () {
     const form    = document.getElementById('formNuovaSessione');
     const today   = <?= json_encode($today) ?>;
-    const nowTime = <?= json_encode($nowTime) ?>;
     if (!form) return;
 
     form.addEventListener('submit', function (e) {
         let valid = true;
 
-        // Required selects (skip id_laboratorio per docente — è hidden)
         const checks = [
             { id: 'id_classe',        msg: <?= json_encode($L['sess_err_classe']) ?>,       check: v => !!v },
             { id: 'ora_ingresso',     msg: <?= json_encode($L['sess_err_ora_ingresso']) ?>, check: v => !!v },
@@ -372,30 +352,22 @@ foreach ($docenti as $doc) {
             }
         }
 
-        // Entry time validation
+        // Entry time: only check it is not empty (already handled by required check above)
         const oraI = document.getElementById('ora_ingresso');
         let oraIngressoValid = true;
         if (oraI) {
             if (!oraI.value) {
-                // campo vuoto — già gestito dal check required sopra
                 oraIngressoValid = false;
-            } else if (selectedDate === today && oraI.value > nowTime) {
-                formShowErr(oraI, 'err_ora_ingresso', <?= json_encode($L['sess_err_ora_ingresso_futura'] ?? $L['sess_err_ora_ingresso']) ?>);
-                oraIngressoValid = false;
-                valid = false;
             } else {
                 formClearErr(oraI, 'err_ora_ingresso');
             }
         }
 
-        // Exit time: controllata SOLO se ora_ingresso è valida
+        // Exit time: must be after entry time
         const oraU = document.getElementById('ora_uscita');
         if (oraI && oraU && oraU.value && oraIngressoValid) {
             if (oraU.value <= oraI.value) {
                 formShowErr(oraU, 'err_ora_uscita', <?= json_encode($L['sess_err_ora_uscita']) ?>);
-                valid = false;
-            } else if (selectedDate === today && oraU.value > nowTime) {
-                formShowErr(oraU, 'err_ora_uscita', <?= json_encode($L['sess_err_ora_uscita_futura'] ?? $L['sess_err_ora_uscita']) ?>);
                 valid = false;
             } else {
                 formClearErr(oraU, 'err_ora_uscita');

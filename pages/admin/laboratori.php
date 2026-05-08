@@ -17,10 +17,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($nome && $aula) {
             $n = mysqli_real_escape_string($conn, $nome);
             $a = mysqli_real_escape_string($conn, $aula);
-            $no = mysqli_real_escape_string($conn, $note);
             $r_sql  = $resp    ? $resp    : 'NULL';
             $t_sql  = $tecnico ? $tecnico : 'NULL';
-            mysqli_query($conn, "INSERT INTO laboratori (nome, aula, note, id_responsabile, id_assistente_tecnico) VALUES ('$n','$a','$no',$r_sql,$t_sql)");
+            mysqli_query($conn, "INSERT INTO laboratori (nome, aula, id_responsabile, id_assistente_tecnico) VALUES ('$n','$a',$r_sql,$t_sql)");
             header('Location: ' . BASE_PATH . '/pages/admin/laboratori.php?success=Laboratorio+creato');
         } else {
             header('Location: ' . BASE_PATH . '/pages/admin/laboratori.php?error=Nome+e+aula+obbligatori');
@@ -32,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id      = intval($_POST['id']   ?? 0);
         $nome    = trim($_POST['nome']   ?? '');
         $aula    = trim($_POST['aula']   ?? '');
-        $note    = trim($_POST['note']   ?? '');
         $attivo  = isset($_POST['attivo']) ? 1 : 0;
         $resp    = intval($_POST['id_responsabile']       ?? 0);
         $tecnico = intval($_POST['id_assistente_tecnico'] ?? 0);
@@ -56,10 +54,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($nome && $aula && $id) {
             $n = mysqli_real_escape_string($conn, $nome);
             $a = mysqli_real_escape_string($conn, $aula);
-            $no = mysqli_real_escape_string($conn, $note);
             $r_sql  = $resp    ? $resp    : 'NULL';
             $t_sql  = $tecnico ? $tecnico : 'NULL';
-            mysqli_query($conn, "UPDATE laboratori SET nome='$n', aula='$a', note='$no', attivo=$attivo, id_responsabile=$r_sql, id_assistente_tecnico=$t_sql WHERE id=$id");
+            mysqli_query($conn, "UPDATE laboratori SET nome='$n', aula='$a', attivo=$attivo, id_responsabile=$r_sql, id_assistente_tecnico=$t_sql WHERE id=$id");
             header('Location: ' . BASE_PATH . '/pages/admin/laboratori.php?success=Laboratorio+aggiornato');
         } else {
             header('Location: ' . BASE_PATH . '/pages/admin/laboratori.php?edit=' . $id . '&error=Dati+non+validi');
@@ -182,7 +179,6 @@ while ($row = mysqli_fetch_assoc($resTecnici)) $tecnici[] = $row;
                             <th>Aula</th>
                             <th>Responsabile</th>
                             <th>Ass. Tecnico</th>
-                            <th>Note</th>
                             <th>Stato</th>
                             <th>Azioni</th>
                         </tr>
@@ -194,7 +190,6 @@ while ($row = mysqli_fetch_assoc($resTecnici)) $tecnici[] = $row;
                             <td><?= htmlspecialchars($lab['aula']) ?></td>
                             <td><?= $lab['resp_cognome'] ? htmlspecialchars($lab['resp_cognome'] . ' ' . $lab['resp_nome']) : '<span class="text-muted">—</span>' ?></td>
                             <td><?= $lab['tec_cognome'] ? htmlspecialchars($lab['tec_cognome'] . ' ' . $lab['tec_nome']) : '<span class="text-muted">—</span>' ?></td>
-                            <td><?= htmlspecialchars($lab['note'] ?? '') ?></td>
                             <td>
                                 <span class="badge <?= $lab['attivo'] ? 'badge-success' : 'badge-danger' ?>">
                                     <?= $lab['attivo'] ? 'Attivo' : 'Inattivo' ?>
