@@ -28,12 +28,12 @@ CREATE TABLE utenti (
 ) ENGINE=InnoDB;
 
 INSERT INTO utenti (id, nome, cognome, email, password_hash, password, ruolo, telefono) VALUES
-(1, 'Daniele', 'Signorile',  'daniele.signorile@itisff.it',  '$2y$10$cKPIQ9CtwzE2Ofd4IssESuFPT1ZGNZ1v80eqqYUWhthJC5GP.e78O', '$2y$10$cKPIQ9CtwzE2Ofd4IssESuFPT1ZGNZ1v80eqqYUWhthJC5GP.e78O', 'admin',   '333-1111111'),
-(2, 'Mario',   'Rossi',      'mario.rossi@itisff.it',       '$2y$10$k.r3NrnU6Y4r/8YT7SWe/ONxlQYLb895TKAoPXRtfnuGRHD7azdi6', '$2y$10$k.r3NrnU6Y4r/8YT7SWe/ONxlQYLb895TKAoPXRtfnuGRHD7azdi6', 'admin',   '333-2222222'),
-(3, 'Luigi',   'Bianchi',    'luigi.bianchi@itisff.it',     '$2y$10$ZeoGHoiR5lbQ9qTWjFCvPO1L54RIGcO0YmfFxGMgTCBSx85lDT532', '$2y$10$ZeoGHoiR5lbQ9qTWjFCvPO1L54RIGcO0YmfFxGMgTCBSx85lDT532', 'admin',   '333-3333333'),
-(4, 'Elena',   'Torricelli', 'elena.torricelli@itisff.it',   '$2y$10$WgakvRt24Bkt5spnaHA9JeOAFioQw9RC//f/oB3GvDdpUjcqaHpou', '$2y$10$WgakvRt24Bkt5spnaHA9JeOAFioQw9RC//f/oB3GvDdpUjcqaHpou', 'tecnico', '333-4444444'),
-(5, 'Roberto', 'Boyle',      'roberto.boyle@itisff.it',      '$2y$10$tr3dZNpum/8/j3t/iYr4pOUnZQiHrLjAFrmnU4FlBg/BqZpU5y9Ha', '$2y$10$tr3dZNpum/8/j3t/iYr4pOUnZQiHrLjAFrmnU4FlBg/BqZpU5y9Ha', 'docente', NULL);
-(6, 'Francesco', 'Moretto',      'francesco.moretto@itisff.it',      'prova', 'prova', 'admin', '333-1111111');
+(1, 'Daniele',   'Signorile',  'daniele.signorile@itisff.it',   '$2y$10$cKPIQ9CtwzE2Ofd4IssESuFPT1ZGNZ1v80eqqYUWhthJC5GP.e78O', '$2y$10$cKPIQ9CtwzE2Ofd4IssESuFPT1ZGNZ1v80eqqYUWhthJC5GP.e78O', 'admin',   '333-1111111'),
+(2, 'Mario',     'Rossi',      'mario.rossi@itisff.it',         '$2y$10$k.r3NrnU6Y4r/8YT7SWe/ONxlQYLb895TKAoPXRtfnuGRHD7azdi6', '$2y$10$k.r3NrnU6Y4r/8YT7SWe/ONxlQYLb895TKAoPXRtfnuGRHD7azdi6', 'admin',   '333-2222222'),
+(3, 'Luigi',     'Bianchi',    'luigi.bianchi@itisff.it',       '$2y$10$ZeoGHoiR5lbQ9qTWjFCvPO1L54RIGcO0YmfFxGMgTCBSx85lDT532', '$2y$10$ZeoGHoiR5lbQ9qTWjFCvPO1L54RIGcO0YmfFxGMgTCBSx85lDT532', 'admin',   '333-3333333'),
+(4, 'Elena',     'Torricelli', 'elena.torricelli@itisff.it',    '$2y$10$WgakvRt24Bkt5spnaHA9JeOAFioQw9RC//f/oB3GvDdpUjcqaHpou', '$2y$10$WgakvRt24Bkt5spnaHA9JeOAFioQw9RC//f/oB3GvDdpUjcqaHpou', 'tecnico', '333-4444444'),
+(5, 'Roberto',   'Boyle',      'roberto.boyle@itisff.it',       '$2y$10$tr3dZNpum/8/j3t/iYr4pOUnZQiHrLjAFrmnU4FlBg/BqZpU5y9Ha', '$2y$10$tr3dZNpum/8/j3t/iYr4pOUnZQiHrLjAFrmnU4FlBg/BqZpU5y9Ha', 'docente', NULL),
+(6, 'Francesco', 'Moretto',    'francesco.moretto@itisff.it',   'prova', 'prova', 'admin', '333-1111111');
 
 
 -- ============================================================
@@ -119,15 +119,15 @@ CREATE TABLE materiali (
 ) ENGINE=InnoDB;
 
 INSERT INTO materiali (nome, descrizione, unita_misura, id_laboratorio, quantita_disponibile, soglia_minima) VALUES
-('Cavo Ethernet Cat.6',   'Cavi di rete per postazioni',         'pezzi',  1, 50,  10),
-('Mouse USB',             'Mouse ottico USB di ricambio',         'pezzi',  1, 15,   5),
-('Tastiera USB',          'Tastiera standard USB di ricambio',    'pezzi',  1, 10,   3),
-('Cavo HDMI 2m',          'Cavo HDMI maschio-maschio',            'pezzi',  2, 20,   5),
-('Adattatore VGA-HDMI',   'Convertitore per proiettori',          'pezzi',  2,  8,   2),
-('Penna USB 32GB',        'Chiavette USB per studenti',           'pezzi',  2, 12,   4),
-('Cavo di alimentazione', 'Cavo alimentazione PC standard',       'pezzi',  3, 25,   5),
-('Pasta termica',         'Pasta termica per processori',         'grammi', 3, 30,  10),
-('Cavo UTP spezzato',     'Cavo UTP per esercitazioni crimpatura','metri',  4, 100, 20);
+('Cavo Ethernet Cat.6',   'Cavi di rete per postazioni',          'pezzi',  1, 50,  10),
+('Mouse USB',             'Mouse ottico USB di ricambio',          'pezzi',  1, 15,   5),
+('Tastiera USB',          'Tastiera standard USB di ricambio',     'pezzi',  1, 10,   3),
+('Cavo HDMI 2m',          'Cavo HDMI maschio-maschio',             'pezzi',  2, 20,   5),
+('Adattatore VGA-HDMI',   'Convertitore per proiettori',           'pezzi',  2,  8,   2),
+('Penna USB 32GB',        'Chiavette USB per studenti',            'pezzi',  2, 12,   4),
+('Cavo di alimentazione', 'Cavo alimentazione PC standard',        'pezzi',  3, 25,   5),
+('Pasta termica',         'Pasta termica per processori',          'grammi', 3, 30,  10),
+('Cavo UTP spezzato',     'Cavo UTP per esercitazioni crimpatura', 'metri',  4, 100, 20);
 
 CREATE TABLE sessioni_laboratorio (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -202,7 +202,7 @@ CREATE TABLE segnalazioni (
 ) ENGINE=InnoDB;
 
 INSERT INTO segnalazioni (id_laboratorio, id_sessione, id_utente, titolo, descrizione, priorita, stato) VALUES
-(1, 1, 5, 'PC postazione 7 non si accende',   'Il PC non risponde al tasto di accensione. Cavo testato, presa OK.', 'alta',  'aperta'),
+(1, 1, 5, 'PC postazione 7 non si accende',    'Il PC non risponde al tasto di accensione. Cavo testato, presa OK.', 'alta',  'aperta'),
 (2, NULL, 2, 'Proiettore con immagine distorta', 'Righe verticali nella parte destra dello schermo.',                'media', 'in_lavorazione');
 
 SET FOREIGN_KEY_CHECKS = 1;
