@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="slides-format" content="viewport">
+    <title>Registrony — Presentazione</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300..700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+        @theme {
+            --color-bg: #0b1120;
+            --color-bg-deep: #060d1a;
+            --color-surface: #111827;
+            --color-text: #e2e8f0;
+            --color-text-secondary: #94a3b8;
+            --color-text-muted: #64748b;
+            --color-accent-1: #38bdf8;
+            --color-accent-2: #34d399;
+            --color-accent-3: #818cf8;
+            --color-glass-bg: rgba(255,255,255,0.05);
+            --color-glass-border: rgba(255,255,255,0.08);
+            --color-vignette: rgba(0,0,0,0.45);
+            --font-display: 'Instrument Serif', Georgia, serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+    </style>
+    <style>
+        :root { --color-bg: #0b1120; --color-text: #e2e8f0; --glow-color-rgb: 56,189,248; }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { background: var(--color-bg); margin: 0; }
+        body { font-family: var(--font-body); color: var(--color-text); overflow: hidden; height: 100vh; width: 100vw; }
+        .deck { width: 100vw; height: 100vh; position: relative; }
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: scale(0.95); transition: opacity 0.7s ease, transform 0.7s ease; pointer-events: none; overflow: hidden; }
+        .slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+        .slide > .content { position: relative; z-index: 2; width: 100%; max-width: 1100px; padding: clamp(1.5rem, 4vw, 4rem); }
+        .nav-controls { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; z-index: 100; background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 10px 24px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.08); }
+        .nav-btn { width: 38px; height: 38px; border: none; background: rgba(255,255,255,0.05); color: #38bdf8; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
+        .nav-btn:hover { background: rgba(255,255,255,0.12); }
+        .slide-dots { display: flex; gap: 7px; }
+        .slide-dots .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; transition: background 0.3s, transform 0.3s; }
+        .slide-dots .dot.active { background: #38bdf8; transform: scale(1.35); }
+        .slide-counter { font-size: 0.78rem; color: #64748b; min-width: 38px; text-align: center; font-family: 'DM Sans', sans-serif; }
+        .reveal { opacity: 0; transform: translateY(22px); }
+
+        /* Glow */
+        .text-glow { text-shadow: 0 0 20px rgba(56,189,248,0.5), 0 0 40px rgba(56,189,248,0.2); }
+        .stat-glow { text-shadow: 0 0 30px rgba(56,189,248,0.6), 0 0 60px rgba(56,189,248,0.25); }
+        @keyframes glow-pulse { 0%,100%{text-shadow:0 0 20px rgba(56,189,248,.5),0 0 40px rgba(56,189,248,.2)}50%{text-shadow:0 0 30px rgba(56,189,248,.8),0 0 60px rgba(56,189,248,.3)} }
+        .glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+
+        /* Blobs */
+        @keyframes float-slow { 0%{transform:translate(0,0) scale(1)}25%{transform:translate(60px,-50px) scale(1.12)}50%{transform:translate(-40px,40px) scale(.9)}75%{transform:translate(50px,20px) scale(1.08)}100%{transform:translate(0,0) scale(1)} }
+        @keyframes float-drift { 0%{transform:translate(0,0) scale(1) rotate(0)}33%{transform:translate(-50px,-60px) scale(1.15) rotate(3deg)}66%{transform:translate(40px,30px) scale(.88) rotate(-2deg)}100%{transform:translate(0,0) scale(1) rotate(0)} }
+        @keyframes float { 0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)} }
+        .gradient-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); animation: float-slow 10s ease-in-out infinite; }
+        .blob:nth-child(2) { animation: float-drift 14s ease-in-out infinite; }
+        .blob:nth-child(3) { animation: float-slow 18s ease-in-out infinite reverse; }
+        .blob:nth-child(4) { animation: float-drift 22s ease-in-out infinite reverse; }
+
+        /* Noise + vignette */
+        .slide::before { content:''; position:absolute; inset:0; z-index:1; pointer-events:none; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); background-repeat:repeat; background-size:256px; opacity:.03; mix-blend-mode:overlay; }
+        .slide::after { content:''; position:absolute; inset:0; z-index:1; pointer-events:none; background:radial-gradient(ellipse at center,transparent 50%,var(--color-vignette) 100%); }
+
+        /* Bar charts */
+        .bar-track { background: rgba(255,255,255,0.06); border-radius: 6px; height: 10px; width: 100%; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #38bdf8, #34d399); width: 0%; transition: width 0.8s ease; }
+
+        /* Timeline */
+        .timeline-line { position: absolute; left: 19px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, #38bdf8, #818cf8); }
+        .timeline-dot { width: 14px; height: 14px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.6); flex-shrink: 0; margin-top: 3px; }
+
+        /* Code badge */
+        .code-badge { font-family: 'Courier New', monospace; font-size: 0.82rem; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.18); border-radius: 6px; padding: 2px 8px; color: #38bdf8; }
+
+        @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.2s!important; } }
+    </style>
+</head>
+<body>
+
+<div class="mouse-spotlight" style="position:fixed;inset:0;z-index:99;pointer-events:none;"></div>
+
+<div class="deck">
+
+    <!-- SLIDE 1: TITOLO -->
+    <div class="slide slide-1 active" data-slide="1">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:520px;height:520px;top:-120px;right:-100px;background:#38bdf8;opacity:.13;"></div>
+            <div class="blob" style="width:320px;height:320px;bottom:-80px;left:-60px;background:#34d399;opacity:.11;"></div>
+            <div class="blob" style="width:220px;height:220px;top:45%;left:10%;background:#818cf8;opacity:.09;"></div>
+        </div>
+        <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+        <div class="content text-center">
+            <div style="font-size:96px;margin-bottom:1.2rem;animation:float 3s ease-in-out infinite;display:inline-block;">🖥️</div>
+            <h1 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(2.6rem,6vw,5rem);font-weight:700;background:linear-gradient(135deg,#38bdf8,#34d399,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;margin-bottom:1rem;">Registrony</h1>
+            <p class="reveal" style="font-size:clamp(0.9rem,1.6vw,1.2rem);letter-spacing:6px;text-transform:uppercase;color:#64748b;font-weight:400;">Gestione Registro Laboratori Scolastici</p>
+            <div class="reveal" style="margin-top:2rem;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+                <span style="background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);border-radius:999px;padding:6px 18px;font-size:0.82rem;color:#38bdf8;">PHP + MySQL</span>
+                <span style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2);border-radius:999px;padding:6px 18px;font-size:0.82rem;color:#34d399;">Multilingua IT/EN</span>
+                <span style="background:rgba(129,140,248,0.1);border:1px solid rgba(129,140,248,0.2);border-radius:999px;padding:6px 18px;font-size:0.82rem;color:#818cf8;">Report PDF</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: IL PROBLEMA -->
+    <div class="slide slide-2" data-slide="2">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:350px;height:350px;top:-80px;right:-80px;background:#38bdf8;opacity:.08;"></div>
+            <div class="blob" style="width:250px;height:250px;bottom:-60px;left:-40px;background:#34d399;opacity:.06;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.8rem;letter-spacing:5px;text-transform:uppercase;color:#38bdf8;margin-bottom:0.6rem;">Contesto</p>
+            <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(2rem,4.5vw,3rem);font-weight:700;margin-bottom:2rem;">Il Problema</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1.6rem;border-left:4px solid #ef4444;">
+                    <div style="font-size:2rem;margin-bottom:0.7rem;">📋</div>
+                    <h3 style="font-weight:600;font-size:1rem;margin-bottom:0.5rem;color:#fca5a5;">Prima — Carta e penna</h3>
+                    <ul style="font-size:0.88rem;color:#94a3b8;line-height:1.8;list-style:none;padding:0;">
+                        <li>✗ Registro cartaceo smarrito o danneggiato</li>
+                        <li>✗ Nessun tracciamento storico delle presenze</li>
+                        <li>✗ Report manuali, lenti e soggetti a errori</li>
+                        <li>✗ Nessuna gestione dei permessi per ruolo</li>
+                    </ul>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1.6rem;border-left:4px solid #34d399;">
+                    <div style="font-size:2rem;margin-bottom:0.7rem;">🚀</div>
+                    <h3 style="font-weight:600;font-size:1rem;margin-bottom:0.5rem;color:#6ee7b7;">Dopo — Registrony</h3>
+                    <ul style="font-size:0.88rem;color:#94a3b8;line-height:1.8;list-style:none;padding:0;">
+                        <li>✓ Registro digitale sempre disponibile</li>
+                        <li>✓ Storico completo con data e ora precisi</li>
+                        <li>✓ Generazione automatica di report PDF</li>
+                        <li>✓ Ruoli distinti: Responsabile vs Utente</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: ARCHITETTURA -->
+    <div class="slide slide-3" data-slide="3">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:380px;height:380px;top:-90px;left:-90px;background:#818cf8;opacity:.09;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-60px;right:-50px;background:#38bdf8;opacity:.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.8rem;letter-spacing:5px;text-transform:uppercase;color:#818cf8;margin-bottom:0.6rem;">Stack Tecnico</p>
+            <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;margin-bottom:1.8rem;">Architettura del Progetto</h2>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;">
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <div style="font-size:1.8rem;margin-bottom:0.6rem;">🗂️</div>
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#e2e8f0;margin-bottom:0.5rem;">Struttura File</h4>
+                    <div style="font-size:0.8rem;color:#64748b;line-height:1.9;">
+                        <span class="code-badge">index.php</span> entry point<br>
+                        <span class="code-badge">pages/</span> pagine app<br>
+                        <span class="code-badge">includes/</span> header, sidebar<br>
+                        <span class="code-badge">config/</span> DB connection
+                    </div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <div style="font-size:1.8rem;margin-bottom:0.6rem;">🔧</div>
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#e2e8f0;margin-bottom:0.5rem;">Backend</h4>
+                    <div style="font-size:0.8rem;color:#64748b;line-height:1.9;">
+                        PHP 8+ con sessioni<br>
+                        MySQL per i dati<br>
+                        Pattern MVC-like<br>
+                        <span class="code-badge">lib/</span> utility e helper
+                    </div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <div style="font-size:1.8rem;margin-bottom:0.6rem;">🌐</div>
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#e2e8f0;margin-bottom:0.5rem;">Frontend</h4>
+                    <div style="font-size:0.8rem;color:#64748b;line-height:1.9;">
+                        HTML/CSS + JS<br>
+                        <span class="code-badge">assets/</span> statici<br>
+                        Sidebar responsive<br>
+                        Lingua via <span class="code-badge">$_SESSION</span>
+                    </div>
+                </div>
+            </div>
+            <div class="reveal" style="margin-top:1.4rem;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.12);border-radius:10px;padding:1rem 1.4rem;font-size:0.85rem;color:#94a3b8;">
+                📦 <strong style="color:#38bdf8;">Setup guidato</strong> — <span class="code-badge">setup.php</span> gestisce la configurazione iniziale del DB e del primo utente amministratore
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: FUNZIONALITA' -->
+    <div class="slide slide-4" data-slide="4">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:300px;height:300px;top:-60px;right:-60px;background:#34d399;opacity:.08;"></div>
+            <div class="blob" style="width:220px;height:220px;bottom:-50px;left:-40px;background:#38bdf8;opacity:.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.8rem;letter-spacing:5px;text-transform:uppercase;color:#34d399;margin-bottom:0.6rem;">Features</p>
+            <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;margin-bottom:1.8rem;">Funzionalità Principali</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;">
+                <div class="reveal" style="display:flex;gap:1rem;align-items:flex-start;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.2rem;">
+                    <span style="font-size:1.8rem;">📝</span>
+                    <div><h4 style="font-weight:600;font-size:0.95rem;margin-bottom:0.3rem;">Registro Presenze</h4><p style="font-size:0.82rem;color:#94a3b8;line-height:1.6;">Registrazione entrata/uscita degli studenti con timestamp automatico per ogni sessione laboratorio.</p></div>
+                </div>
+                <div class="reveal" style="display:flex;gap:1rem;align-items:flex-start;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.2rem;">
+                    <span style="font-size:1.8rem;">🔄</span>
+                    <div><h4 style="font-weight:600;font-size:0.95rem;margin-bottom:0.3rem;">Cambio Laboratorio</h4><p style="font-size:0.82rem;color:#94a3b8;line-height:1.6;">Switch istantaneo tra laboratori diversi (es. Aula A / Aula B) dalla sidebar, senza logout.</p></div>
+                </div>
+                <div class="reveal" style="display:flex;gap:1rem;align-items:flex-start;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.2rem;">
+                    <span style="font-size:1.8rem;">📄</span>
+                    <div><h4 style="font-weight:600;font-size:0.95rem;margin-bottom:0.3rem;">Report PDF</h4><p style="font-size:0.82rem;color:#94a3b8;line-height:1.6;">Generazione automatica di report PDF scaricabili con storico presenze filtrato per data e aula.</p></div>
+                </div>
+                <div class="reveal" style="display:flex;gap:1rem;align-items:flex-start;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.2rem;">
+                    <span style="font-size:1.8rem;">📦</span>
+                    <div><h4 style="font-weight:600;font-size:0.95rem;margin-bottom:0.3rem;">Gestione Materiali</h4><p style="font-size:0.82rem;color:#94a3b8;line-height:1.6;">Inventario attrezzature per laboratorio, con controllo disponibilità e stato dei dispositivi.</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: AUTENTICAZIONE -->
+    <div class="slide slide-5" data-slide="5">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:340px;height:340px;top:-70px;right:-70px;background:#f59e0b;opacity:.07;"></div>
+            <div class="blob" style="width:240px;height:240px;bottom:-50px;left:-40px;background:#818cf8;opacity:.08;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.8rem;letter-spacing:5px;text-transform:uppercase;color:#f59e0b;margin-bottom:0.6rem;">Sicurezza</p>
+            <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;margin-bottom:1.8rem;">Autenticazione e Ruoli</h2>
+            <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:2rem;align-items:start;">
+                <div>
+                    <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;margin-bottom:1.2rem;">
+                        <h4 style="font-weight:600;font-size:0.92rem;color:#fcd34d;margin-bottom:0.8rem;">⭐ Responsabile</h4>
+                        <ul style="font-size:0.84rem;color:#94a3b8;line-height:1.9;list-style:none;padding:0;">
+                            <li>→ Accesso completo a tutti i laboratori</li>
+                            <li>→ Gestione utenti e permessi</li>
+                            <li>→ Generazione report PDF</li>
+                            <li>→ Configurazione materiali</li>
+                        </ul>
+                    </div>
+                    <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                        <h4 style="font-weight:600;font-size:0.92rem;color:#93c5fd;margin-bottom:0.8rem;">👤 Utente Base</h4>
+                        <ul style="font-size:0.84rem;color:#94a3b8;line-height:1.9;list-style:none;padding:0;">
+                            <li>→ Registrazione presenze nel lab assegnato</li>
+                            <li>→ Visualizzazione storico personale</li>
+                            <li>→ Nessun accesso alle impostazioni</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#e2e8f0;margin-bottom:1rem;">🔐 Flusso Login</h4>
+                    <div style="position:relative;padding-left:2.2rem;">
+                        <div class="timeline-line"></div>
+                        <div style="display:flex;flex-direction:column;gap:1rem;">
+                            <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+                                <div class="timeline-dot"></div>
+                                <div style="font-size:0.82rem;color:#94a3b8;"><strong style="color:#e2e8f0;">login.php</strong><br>Form utente/password</div>
+                            </div>
+                            <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+                                <div class="timeline-dot" style="background:#34d399;box-shadow:0 0 10px rgba(52,211,153,0.6);"></div>
+                                <div style="font-size:0.82rem;color:#94a3b8;"><strong style="color:#e2e8f0;">$_SESSION</strong><br>Salva user + lang + lab</div>
+                            </div>
+                            <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+                                <div class="timeline-dot" style="background:#818cf8;box-shadow:0 0 10px rgba(129,140,248,0.6);"></div>
+                                <div style="font-size:0.82rem;color:#94a3b8;"><strong style="color:#e2e8f0;">index.php</strong><br>Routing per ruolo</div>
+                            </div>
+                            <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+                                <div class="timeline-dot" style="background:#f59e0b;box-shadow:0 0 10px rgba(245,158,11,0.6);"></div>
+                                <div style="font-size:0.82rem;color:#94a3b8;"><strong style="color:#e2e8f0;">logout.php</strong><br>Distrugge la sessione</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: SISTEMA MULTILINGUA -->
+    <div class="slide slide-6" data-slide="6">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:360px;height:360px;top:-80px;right:-80px;background:#38bdf8;opacity:.08;"></div>
+            <div class="blob" style="width:240px;height:240px;bottom:-50px;left:-40px;background:#34d399;opacity:.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.8rem;letter-spacing:5px;text-transform:uppercase;color:#38bdf8;margin-bottom:0.6rem;">i18n</p>
+            <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;margin-bottom:1.8rem;">Sistema Multilingua</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;">
+                <div>
+                    <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;margin-bottom:1.2rem;">
+                        <h4 style="font-weight:600;font-size:0.92rem;color:#e2e8f0;margin-bottom:0.8rem;">Come funziona</h4>
+                        <ol style="font-size:0.84rem;color:#94a3b8;line-height:1.9;padding-left:1.2rem;">
+                            <li>Click su 🇮🇹 IT o 🇬🇧 EN nel header</li>
+                            <li>PHP salva <span class="code-badge">$_SESSION['lang']</span></li>
+                            <li>Pagina ricaricata automaticamente</li>
+                            <li>Ogni testo usa <span class="code-badge">L('chiave')</span></li>
+                            <li>La funzione legge il file lingua corretto</li>
+                        </ol>
+                    </div>
+                    <div class="reveal" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.14);border-radius:10px;padding:1rem 1.2rem;font-size:0.83rem;">
+                        <span style="color:#38bdf8;font-weight:600;">Fix recente:</span> <span style="color:#94a3b8;">6 stringhe hardcoded nella sidebar sono state sostituite con chiamate <span class="code-badge">L()</span> — ora tutta la UI risponde al cambio lingua.</span>
+                    </div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#e2e8f0;margin-bottom:0.8rem;">Chiavi di traduzione</h4>
+                    <div style="font-family:'Courier New',monospace;font-size:0.75rem;line-height:2;">
+                        <div style="color:#64748b;">// lang/it.php</div>
+                        <div><span style="color:#818cf8;">'nav_registro_attivo'</span> <span style="color:#64748b;">=></span> <span style="color:#34d399;">'Registro attivo'</span></div>
+                        <div><span style="color:#818cf8;">'nav_cambia_lab'</span> <span style="color:#64748b;">=></span> <span style="color:#34d399;">'⇆ Cambia lab'</span></div>
+                        <div><span style="color:#818cf8;">'label_aula'</span> <span style="color:#64748b;">=></span> <span style="color:#34d399;">'Aula'</span></div>
+                        <div style="color:#64748b;margin-top:0.4rem;">// lang/en.php</div>
+                        <div><span style="color:#818cf8;">'nav_registro_attivo'</span> <span style="color:#64748b;">=></span> <span style="color:#38bdf8;">'Active registry'</span></div>
+                        <div><span style="color:#818cf8;">'nav_cambia_lab'</span> <span style="color:#64748b;">=></span> <span style="color:#38bdf8;">'⇆ Change lab'</span></div>
+                        <div><span style="color:#818cf8;">'label_aula'</span> <span style="color:#64748b;">=></span> <span style="color:#38bdf8;">'Room'</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: DATABASE -->
+    <div class="slide slide-7" data-slide="7">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:320px;height:320px;top:-70px;left:-70px;background:#34d399;opacity:.08;"></div>
+            <div class="blob" style="width:220px;height:220px;bottom:-50px;right:-40px;background:#818cf8;opacity:.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.8rem;letter-spacing:5px;text-transform:uppercase;color:#34d399;margin-bottom:0.6rem;">MySQL</p>
+            <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;margin-bottom:1.8rem;">Schema Database</h2>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(56,189,248,0.2);border-radius:12px;padding:1.2rem;text-align:center;">
+                    <div style="font-size:1.6rem;margin-bottom:0.5rem;">👤</div>
+                    <div style="font-weight:600;font-size:0.88rem;color:#38bdf8;margin-bottom:0.4rem;">utenti</div>
+                    <div style="font-size:0.75rem;color:#64748b;line-height:1.7;">id, username<br>password (hash)<br>ruolo, laboratorio</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:1.2rem;text-align:center;">
+                    <div style="font-size:1.6rem;margin-bottom:0.5rem;">🏫</div>
+                    <div style="font-weight:600;font-size:0.88rem;color:#34d399;margin-bottom:0.4rem;">laboratori</div>
+                    <div style="font-size:0.75rem;color:#64748b;line-height:1.7;">id, nome_aula<br>descrizione<br>capienza</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(129,140,248,0.2);border-radius:12px;padding:1.2rem;text-align:center;">
+                    <div style="font-size:1.6rem;margin-bottom:0.5rem;">📋</div>
+                    <div style="font-weight:600;font-size:0.88rem;color:#818cf8;margin-bottom:0.4rem;">presenze</div>
+                    <div style="font-size:0.75rem;color:#64748b;line-height:1.7;">id, id_utente<br>id_lab, data<br>ora_entrata/uscita</div>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:1.2rem;text-align:center;">
+                    <div style="font-size:1.6rem;margin-bottom:0.5rem;">📦</div>
+                    <div style="font-weight:600;font-size:0.88rem;color:#f59e0b;margin-bottom:0.4rem;">materiali</div>
+                    <div style="font-size:0.75rem;color:#64748b;line-height:1.7;">id, nome<br>id_lab, quantità<br>stato</div>
+                </div>
+            </div>
+            <div class="reveal" style="margin-top:1.4rem;">
+                <div style="font-size:0.82rem;color:#64748b;margin-bottom:0.8rem;">Schema disponibile in <span class="code-badge">registronyCorretto.sql</span> (19 KB) — include dati di esempio</div>
+                <div style="display:flex;flex-direction:column;gap:0.6rem;">
+                    <div style="display:flex;align-items:center;gap:0.8rem;font-size:0.82rem;">
+                        <span style="color:#94a3b8;width:120px;">Relazioni FK</span>
+                        <div class="bar-track" style="flex:1;"><div class="bar-fill" data-width="90"></div></div>
+                        <span style="color:#38bdf8;width:40px;text-align:right;">Complete</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.8rem;font-size:0.82rem;">
+                        <span style="color:#94a3b8;width:120px;">Indici ottimizzati</span>
+                        <div class="bar-track" style="flex:1;"><div class="bar-fill" data-width="75" style="background:linear-gradient(90deg,#818cf8,#38bdf8);"></div></div>
+                        <span style="color:#818cf8;width:40px;text-align:right;">Parziali</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 8: FLUSSO UTENTE -->
+    <div class="slide slide-8" data-slide="8">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:350px;height:350px;top:-80px;right:-80px;background:#38bdf8;opacity:.08;"></div>
+            <div class="blob" style="width:230px;height:230px;bottom:-50px;left:-40px;background:#34d399;opacity:.07;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.8rem;letter-spacing:5px;text-transform:uppercase;color:#38bdf8;margin-bottom:0.6rem;">UX</p>
+            <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;margin-bottom:2rem;">Flusso Utente</h2>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.8rem;align-items:center;">
+                <div class="reveal" style="text-align:center;">
+                    <div style="background:rgba(56,189,248,0.1);border:2px solid rgba(56,189,248,0.25);border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto 0.6rem;">🔐</div>
+                    <div style="font-size:0.82rem;font-weight:600;color:#e2e8f0;">Login</div>
+                    <div style="font-size:0.72rem;color:#64748b;margin-top:0.2rem;">Autenticazione con sessione PHP</div>
+                </div>
+                <div class="reveal" style="text-align:center;font-size:1.4rem;color:#38bdf8;">→</div>
+                <div class="reveal" style="text-align:center;">
+                    <div style="background:rgba(52,211,153,0.1);border:2px solid rgba(52,211,153,0.25);border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto 0.6rem;">🏫</div>
+                    <div style="font-size:0.82rem;font-weight:600;color:#e2e8f0;">Selezione Lab</div>
+                    <div style="font-size:0.72rem;color:#64748b;margin-top:0.2rem;">Scelta o cambio laboratorio attivo</div>
+                </div>
+                <div class="reveal" style="text-align:center;font-size:1.4rem;color:#34d399;">→</div>
+                <div class="reveal" style="text-align:center;">
+                    <div style="background:rgba(129,140,248,0.1);border:2px solid rgba(129,140,248,0.25);border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto 0.6rem;">📝</div>
+                    <div style="font-size:0.82rem;font-weight:600;color:#e2e8f0;">Registro</div>
+                    <div style="font-size:0.72rem;color:#64748b;margin-top:0.2rem;">Registrazione presenze studenti</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;margin-top:1.2rem;">
+                <div style="grid-column:2;text-align:center;font-size:1.2rem;color:#818cf8;">↓</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.3rem;">
+                <div class="reveal" style="display:flex;gap:0.8rem;align-items:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:1rem;">
+                    <span style="font-size:1.6rem;">📄</span>
+                    <div><div style="font-size:0.88rem;font-weight:600;">Export PDF</div><div style="font-size:0.78rem;color:#64748b;">Report scaricabile con filtri data/aula</div></div>
+                </div>
+                <div class="reveal" style="display:flex;gap:0.8rem;align-items:center;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:1rem;">
+                    <span style="font-size:1.6rem;">📊</span>
+                    <div><div style="font-size:0.88rem;font-weight:600;">Storico</div><div style="font-size:0.78rem;color:#64748b;">Visualizzazione storico sessioni passate</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 9: SVILUPPI FUTURI -->
+    <div class="slide slide-9" data-slide="9">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:400px;height:400px;top:-100px;right:-100px;background:#818cf8;opacity:.1;"></div>
+            <div class="blob" style="width:280px;height:280px;bottom:-60px;left:-50px;background:#38bdf8;opacity:.08;"></div>
+        </div>
+        <div class="content">
+            <p class="reveal" style="font-size:0.8rem;letter-spacing:5px;text-transform:uppercase;color:#818cf8;margin-bottom:0.6rem;">Roadmap</p>
+            <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;margin-bottom:1.8rem;">Sviluppi Futuri</h2>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;">
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <div style="font-size:1.8rem;margin-bottom:0.6rem;">📡</div>
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#818cf8;margin-bottom:0.5rem;">API REST</h4>
+                    <p style="font-size:0.82rem;color:#64748b;line-height:1.6;">Esporre endpoint JSON per integrazioni esterne e app mobile native</p>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <div style="font-size:1.8rem;margin-bottom:0.6rem;">📱</div>
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#38bdf8;margin-bottom:0.5rem;">App Mobile</h4>
+                    <p style="font-size:0.82rem;color:#64748b;line-height:1.6;">Versione Android/iOS per registrazione rapida da smartphone con QR code</p>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <div style="font-size:1.8rem;margin-bottom:0.6rem;">🔔</div>
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#34d399;margin-bottom:0.5rem;">Notifiche</h4>
+                    <p style="font-size:0.82rem;color:#64748b;line-height:1.6;">Alert automatici per assenze frequenti o anomalie nel registro presenze</p>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <div style="font-size:1.8rem;margin-bottom:0.6rem;">📊</div>
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#f59e0b;margin-bottom:0.5rem;">Dashboard Analytics</h4>
+                    <p style="font-size:0.82rem;color:#64748b;line-height:1.6;">Grafici interattivi su utilizzo aule, picchi orari e statistiche mensili</p>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <div style="font-size:1.8rem;margin-bottom:0.6rem;">🌍</div>
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#e2e8f0;margin-bottom:0.5rem;">Altre Lingue</h4>
+                    <p style="font-size:0.82rem;color:#64748b;line-height:1.6;">Estensione del sistema L() a FR, DE, ES aggiungendo solo nuovi file lang/</p>
+                </div>
+                <div class="reveal" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.4rem;">
+                    <div style="font-size:1.8rem;margin-bottom:0.6rem;">🔒</div>
+                    <h4 style="font-weight:600;font-size:0.92rem;color:#fca5a5;margin-bottom:0.5rem;">2FA</h4>
+                    <p style="font-size:0.82rem;color:#64748b;line-height:1.6;">Autenticazione a due fattori via OTP per account responsabile</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 10: CONCLUSIONE -->
+    <div class="slide slide-10" data-slide="10">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:500px;height:500px;top:-120px;right:-100px;background:#38bdf8;opacity:.14;"></div>
+            <div class="blob" style="width:320px;height:320px;bottom:-80px;left:-60px;background:#34d399;opacity:.12;"></div>
+            <div class="blob" style="width:220px;height:220px;top:40%;left:12%;background:#818cf8;opacity:.10;"></div>
+        </div>
+        <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+        <div class="content text-center">
+            <div style="font-size:80px;margin-bottom:1.2rem;animation:float 3s ease-in-out infinite;display:inline-block;">🎓</div>
+            <h2 class="reveal" style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(2.2rem,5vw,4rem);font-weight:700;background:linear-gradient(135deg,#38bdf8,#34d399,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem;">Grazie!</h2>
+            <p class="reveal" style="font-size:clamp(0.9rem,1.5vw,1.1rem);color:#94a3b8;max-width:55ch;margin:0 auto 2rem;">Registrony nasce per risolvere un problema reale nelle scuole — digitalizzare la gestione dei laboratori in modo semplice, sicuro e multilingua.</p>
+            <div class="reveal" style="display:flex;gap:1.2rem;justify-content:center;flex-wrap:wrap;">
+                <a href="https://github.com/Ryuzakxx/Registrony" target="_blank" style="background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);border-radius:10px;padding:0.7rem 1.4rem;font-size:0.88rem;color:#38bdf8;text-decoration:none;display:flex;align-items:center;gap:0.5rem;">🔗 GitHub Repo</a>
+                <span style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);border-radius:10px;padding:0.7rem 1.4rem;font-size:0.88rem;color:#34d399;">📚 PHP + MySQL</span>
+                <span style="background:rgba(129,140,248,0.1);border:1px solid rgba(129,140,248,0.25);border-radius:10px;padding:0.7rem 1.4rem;font-size:0.88rem;color:#818cf8;">🌐 IT / EN</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- NAVIGAZIONE -->
+<div class="nav-controls">
+    <button class="nav-btn" onclick="changeSlide(-1)">&#8249;</button>
+    <div class="slide-dots" id="dots"></div>
+    <button class="nav-btn" onclick="changeSlide(1)">&#8250;</button>
+    <span class="slide-counter" id="counter">1 / 10</span>
+</div>
+
+<script>
+    let current = 1;
+    const total = document.querySelectorAll('.slide').length;
+    const dotsContainer = document.getElementById('dots');
+    const counter = document.getElementById('counter');
+    for (let i = 1; i <= total; i++) { const dot = document.createElement('div'); dot.className = 'dot' + (i === 1 ? ' active' : ''); dot.onclick = () => goToSlide(i); dotsContainer.appendChild(dot); }
+    function goToSlide(n) {
+        const prev = document.querySelector('.slide.active');
+        const next = document.querySelector(`.slide[data-slide="${n}"]`);
+        if (prev) prev.classList.remove('active');
+        if (next) { next.classList.add('active'); animateSlide(next); }
+        current = n; updateNav();
+    }
+    function changeSlide(dir) { let n = current + dir; if (n < 1) n = total; if (n > total) n = 1; goToSlide(n); }
+    function updateNav() { document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i+1 === current)); counter.textContent = current + ' / ' + total; }
+    document.addEventListener('keydown', e => { if (e.key==='ArrowRight'||e.key===' '){e.preventDefault();changeSlide(1);} if(e.key==='ArrowLeft'){e.preventDefault();changeSlide(-1);} });
+    let tx=0; document.addEventListener('touchstart',e=>tx=e.touches[0].clientX); document.addEventListener('touchend',e=>{const d=tx-e.changedTouches[0].clientX;if(Math.abs(d)>50)changeSlide(d>0?1:-1);});
+
+    function animateSlide(slide) {
+        slide.querySelectorAll('.reveal').forEach((el, i) => {
+            el.style.transition = 'none'; el.style.opacity = '0'; el.style.transform = 'translateY(22px)';
+            el.offsetHeight;
+            const delay = i * 0.08;
+            el.style.transition = `opacity 0.35s ease ${delay}s, transform 0.35s ease ${delay}s`;
+            el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+        });
+        // bar fills
+        slide.querySelectorAll('.bar-fill:not(.fill-init)').forEach((bar,i) => {
+            bar.classList.add('fill-init');
+            bar.style.width='0%'; bar.style.transition=`width 0.7s ease ${i*0.1}s`; bar.offsetHeight; bar.style.width=bar.dataset.width+'%';
+        });
+    }
+
+    // Mouse spotlight
+    document.addEventListener('mousemove', e => {
+        const s = document.querySelector('.mouse-spotlight');
+        if (s) s.style.background = `radial-gradient(600px circle at ${e.clientX}px ${e.clientY}px, rgba(56,189,248,0.06), transparent 40%)`;
+    });
+
+    // Particle canvas
+    window.initParticles = function(canvas, opts) {
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+        const interactive = opts.interactive !== false;
+        const count = opts.count || (interactive ? 55 : 18);
+        let mx=-1000, my=-1000;
+        const particles = Array.from({length:count}, () => ({ x:Math.random()*canvas.width, y:Math.random()*canvas.height, vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3, size:Math.random()*2.5+.8, alpha:Math.random()*.35+.1 }));
+        if (interactive) { canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mx=e.clientX-r.left;my=e.clientY-r.top;}); canvas.addEventListener('mouseleave',()=>{mx=-1000;my=-1000;}); }
+        (function anim() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            particles.forEach(p => {
+                if (interactive) { const dx=p.x-mx,dy=p.y-my,dist=Math.sqrt(dx*dx+dy*dy); if(dist<120){const f=(120-dist)/120*2;p.vx+=(dx/dist)*f*.1;p.vy+=(dy/dist)*f*.1;} }
+                p.vx*=.98;p.vy*=.98;p.x+=p.vx;p.y+=p.vy;
+                if(p.x<0)p.x=canvas.width;if(p.x>canvas.width)p.x=0;if(p.y<0)p.y=canvas.height;if(p.y>canvas.height)p.y=0;
+                ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fillStyle=`rgba(56,189,248,${p.alpha})`;ctx.fill();
+            });
+            requestAnimationFrame(anim);
+        })();
+    };
+    document.querySelectorAll('.particle-canvas').forEach(c => window.initParticles(c, {interactive:true,count:55}));
+
+    try { animateSlide(document.querySelector('.slide.active')); } catch(e) { console.warn(e); }
+</script>
+</body>
+</html>
