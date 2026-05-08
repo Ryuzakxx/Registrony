@@ -372,16 +372,25 @@ foreach ($docenti as $doc) {
             }
         }
 
-        // Entry time: not in the future if today
+        // Entry time validation
         const oraI = document.getElementById('ora_ingresso');
-        if (oraI && oraI.value && selectedDate === today && oraI.value > nowTime) {
-            formShowErr(oraI, 'err_ora_ingresso', <?= json_encode($L['sess_err_ora_ingresso_futura'] ?? $L['sess_err_ora_ingresso']) ?>);
-            valid = false;
+        let oraIngressoValid = true;
+        if (oraI) {
+            if (!oraI.value) {
+                // campo vuoto — già gestito dal check required sopra
+                oraIngressoValid = false;
+            } else if (selectedDate === today && oraI.value > nowTime) {
+                formShowErr(oraI, 'err_ora_ingresso', <?= json_encode($L['sess_err_ora_ingresso_futura'] ?? $L['sess_err_ora_ingresso']) ?>);
+                oraIngressoValid = false;
+                valid = false;
+            } else {
+                formClearErr(oraI, 'err_ora_ingresso');
+            }
         }
 
-        // Exit time: must be after entry AND not in the future if today
+        // Exit time: controllata SOLO se ora_ingresso è valida
         const oraU = document.getElementById('ora_uscita');
-        if (oraI && oraU && oraU.value) {
+        if (oraI && oraU && oraU.value && oraIngressoValid) {
             if (oraU.value <= oraI.value) {
                 formShowErr(oraU, 'err_ora_uscita', <?= json_encode($L['sess_err_ora_uscita']) ?>);
                 valid = false;
