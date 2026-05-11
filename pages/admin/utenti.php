@@ -41,23 +41,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors)) {
-            $n_e      = mysqli_real_escape_string($conn, $nome);
-            $c_e      = mysqli_real_escape_string($conn, $cognome);
-            $e_e      = mysqli_real_escape_string($conn, $email);
-            $r_e      = mysqli_real_escape_string($conn, $ruolo);
-            $t_SQL    = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
-            $hash     = password_hash($password, PASSWORD_DEFAULT);
-            $p_hash   = mysqli_real_escape_string($conn, $hash);
-            $hasHash  = hasUserColumn($conn, 'password_hash');
-            $hasPlain = hasUserColumn($conn, 'password');
-
-            if ($hasHash && $hasPlain) {
-                mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password_hash, password, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_hash','$p_hash','$r_e',$t_SQL)");
-            } elseif ($hasHash) {
-                mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password_hash, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_hash','$r_e',$t_SQL)");
-            } else {
-                mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password, ruolo, telefono) VALUES ('$n_e','$c_e','$e_e','$p_hash','$r_e',$t_SQL)");
-            }
+            $n_e   = mysqli_real_escape_string($conn, $nome);
+            $c_e   = mysqli_real_escape_string($conn, $cognome);
+            $e_e   = mysqli_real_escape_string($conn, $email);
+            $r_e   = mysqli_real_escape_string($conn, $ruolo);
+            $t_SQL = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
+            // Salva la password fornita come hash bcrypt.
+            // must_change_password = 1: al primo accesso l'utente dovrà impostare la propria password.
+            $p_hash = mysqli_real_escape_string($conn, password_hash($password, PASSWORD_BCRYPT));
+            $hasMCP = _columnExists($conn, 'utenti', 'must_change_password');
+            $mcpField = $hasMCP ? ', must_change_password' : '';
+            $mcpValue = $hasMCP ? ', 1' : '';
+            mysqli_query($conn, "INSERT INTO utenti (nome, cognome, email, password, ruolo, telefono$mcpField) VALUES ('$n_e','$c_e','$e_e','$p_hash','$r_e',$t_SQL$mcpValue)");
             header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?success=' . urlencode($L['utenti_ok_creato']));
         } else {
             header('Location: ' . BASE_PATH . '/pages/admin/utenti.php?error=' . urlencode(implode(' | ', $errors)));
@@ -103,24 +98,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors) && $id) {
-            $n_e  = mysqli_real_escape_string($conn, $nome);
-            $c_e  = mysqli_real_escape_string($conn, $cognome);
-            $e_e  = mysqli_real_escape_string($conn, $email);
-            $r_e  = mysqli_real_escape_string($conn, $ruolo);
+            $n_e   = mysqli_real_escape_string($conn, $nome);
+            $c_e   = mysqli_real_escape_string($conn, $cognome);
+            $e_e   = mysqli_real_escape_string($conn, $email);
+            $r_e   = mysqli_real_escape_string($conn, $ruolo);
             $t_SQL = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
-            if ($newPass) {
-                $hash      = password_hash($newPass, PASSWORD_DEFAULT);
-                $p_hash    = mysqli_real_escape_string($conn, $hash);
-                $hasHash   = hasUserColumn($conn, 'password_hash');
-                $hasPlain  = hasUserColumn($conn, 'password');
 
-                if ($hasHash && $hasPlain) {
-                    mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', password_hash='$p_hash', password='$p_hash', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
-                } elseif ($hasHash) {
-                    mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', password_hash='$p_hash', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
-                } else {
-                    mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', password='$p_hash', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
-                }
+            if ($newPass) {
+                // Nuova password impostata dall'admin: hash bcrypt, reset del flag primo accesso
+                $p_hash = mysqli_real_escape_string($conn, password_hash($newPass, PASSWORD_BCRYPT));
+                $hasMCP = _columnExists($conn, 'utenti', 'must_change_password');
+                // Se l'admin resetta la password, rimette must_change_password=1
+                // così l'utente dovrà cambiarla al prossimo accesso
+                $mcpSet = $hasMCP ? ', must_change_password = 1' : '';
+                mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', password='$p_hash', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo$mcpSet WHERE id=$id");
             } else {
                 mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', email='$e_e', ruolo='$r_e', telefono=$t_SQL, attivo=$attivo WHERE id=$id");
             }
