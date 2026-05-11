@@ -172,7 +172,7 @@ if ($unitaCorrente && !in_array($unitaCorrente, $unitaPredefinite)) {
 
 <div class="card">
     <div class="card-header">
-        <h3><?= htmlspecialchars($isEdit ? ($L['mat_btn_salva'] ?? 'Modifica Materiale') : ('+ ' . ($L['mat_btn_crea'] ?? 'Nuovo Materiale'))) ?></h3>
+        <h3><?= htmlspecialchars($isEdit ? ($L['mat_btn_salva'] ?? 'Modifica Materiale') : ($L['mat_btn_crea'] ?? 'Crea Materiale')) ?></h3>
         <?php if (!isAdmin()): ?>
             <small style="opacity:.7">Stai gestendo i laboratori di cui sei responsabile</small>
         <?php endif; ?>
