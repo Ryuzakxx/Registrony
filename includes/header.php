@@ -322,7 +322,7 @@ if (!$canReport && isDocente()) {
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     style="flex-shrink:0;opacity:.5;margin-left:auto;color:#94a3b8" aria-hidden="true"
+                     style="flex-shrink:0;opacity:.5;margin-left:auto;color:#94a3b8;transition:transform .18s ease" aria-hidden="true"
                      id="userChevron">
                     <polyline points="18 15 12 9 6 15"/>
                 </svg>
@@ -372,11 +372,12 @@ if (!$canReport && isDocente()) {
             <?php endif; ?>
 
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
     /* ── Sidebar mobile ── */
     var sidebar  = document.getElementById('sidebar');
     var overlay  = document.getElementById('sidebarOverlay');
     var toggle   = document.getElementById('menuToggle');
+
     if (sidebar && overlay && toggle) {
         function openSidebar() {
             sidebar.classList.add('open');
@@ -406,30 +407,31 @@ if (!$canReport && isDocente()) {
     var trigger  = document.getElementById('userDropdownTrigger');
     var dropdown = document.getElementById('userDropdown');
     var chevron  = document.getElementById('userChevron');
+
     if (trigger && dropdown) {
         var open = false;
         function openDropdown() {
             open = true;
             dropdown.classList.add('open');
-            trigger.setAttribute('aria-expanded','true');
+            trigger.setAttribute('aria-expanded', 'true');
             if (chevron) chevron.style.transform = 'rotate(180deg)';
         }
         function closeDropdown() {
             open = false;
             dropdown.classList.remove('open');
-            trigger.setAttribute('aria-expanded','false');
-            if (chevron) chevron.style.transform = '';
+            trigger.setAttribute('aria-expanded', 'false');
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
         }
         trigger.addEventListener('click', function (e) {
             e.stopPropagation();
             open ? closeDropdown() : openDropdown();
         });
         document.addEventListener('click', function (e) {
-            if (open && !dropdown.contains(e.target)) closeDropdown();
+            if (open && !dropdown.contains(e.target) && e.target !== trigger) closeDropdown();
         });
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && open) closeDropdown();
         });
     }
-})();
+});
 </script>

@@ -300,7 +300,8 @@
    SMARTPHONE PICCOLI (< 480px)
    ============================================================ */
 @media (max-width: 479px) {
-    .stats-grid { grid-template-columns: 1fr; gap: 7px; }
+    /* Mantiene 2 colonne anche su schermi stretti (no 1-col che allunga troppo) */
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 7px; }
     .materiali-grid { grid-template-columns: 1fr; }
     .top-header .page-title { max-width: 90px; font-size: 13px; }
     .card-body { padding: 10px; }
@@ -343,12 +344,12 @@
     }
     .header-actions .text-muted { display: none; }
 
-    /* Sidebar: stessa logica mobile, già coperta dal default */
+    /* Sidebar: larghezza leggermente maggiore su tablet */
     .sidebar { width: 280px; }
 
-    /* Stats: 2 colonne */
+    /* Stats: 3 colonne su tablet */
     .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 12px;
     }
     .stat-card { padding: 15px 16px; }
@@ -359,6 +360,11 @@
         flex-wrap: wrap;
         gap: 10px;
         padding: 13px 16px;
+    }
+    .card-header > div.d-flex,
+    .card-header > form.d-flex {
+        flex-wrap: wrap;
+        gap: 8px;
     }
 
     /* Tabelle */
@@ -371,12 +377,34 @@
     /* Forms */
     .form-row { grid-template-columns: repeat(2, 1fr); gap: 14px; }
 
-    /* Materiali */
-    .materiali-grid { grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+    /* Materiali: 3 colonne su tablet */
+    .materiali-grid { grid-template-columns: repeat(3, 1fr); gap: .7rem; }
+    .materiale-card { padding: .7rem .9rem; }
 
     /* Registro Banner */
     .registro-banner { flex-wrap: wrap; gap: .65rem; }
     .registro-lab-nome { font-size: 1.05rem; }
+
+    /* Registro Timeline — migliora leggibilità su tablet */
+    .registro-entry { gap: .85rem; padding: .85rem 0; }
+    .registro-orario { min-width: 54px; font-size: .84rem; }
+    .registro-attivita { font-size: .88rem; }
+    .registro-header-row { flex-wrap: wrap; gap: .4rem; }
+    .firma-chip { font-size: .76rem; padding: 3px 9px; }
+    .registro-firme { gap: .35rem; }
+    .registro-divider { margin-left: 62px; }
+
+    /* Storico rapido */
+    .storico-mini { gap: .35rem; padding-top: .9rem; margin-top: 1.1rem; }
+    .storico-chip { font-size: .76rem; padding: 3px 9px; }
+
+    /* Pulsanti card-header: non allargare al 100% su tablet */
+    .card-header .btn-primary,
+    .card-header .btn-secondary,
+    .card-header .btn-warning {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
 }
 
 /* ============================================================

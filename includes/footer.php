@@ -17,7 +17,7 @@ function _bnActive(string $check): string {
         : (strpos($_pf, $check) !== false ? ' active' : '');
 }
 ?>
-<nav class="mobile-bottom-nav" aria-label="Navigazione rapida">
+<nav class="mobile-bottom-nav" aria-label="Navigazione rapida" role="navigation">
     <a href="<?= $_bp ?>/index.php" class="<?= _bnActive('dashboard') ?>" aria-label="Dashboard">
         <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -64,15 +64,51 @@ function _bnActive(string $check): string {
 
 <script>
 (function () {
-    /* Collega il pulsante “Menu” della bottom nav al toggle della sidebar */
-    var moreBtn = document.getElementById('mobileMoreBtn');
-    var toggle  = document.getElementById('menuToggle');
-    if (moreBtn && toggle) {
-        moreBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            toggle.click();
-        });
+    /* Collega il pulsante "Menu" della bottom nav al toggle della sidebar */
+    var moreBtn  = document.getElementById('mobileMoreBtn');
+    var sidebar  = document.getElementById('sidebar');
+    var overlay  = document.getElementById('sidebarOverlay');
+    var toggle   = document.getElementById('menuToggle');
+
+    if (!moreBtn || !sidebar) return;
+
+    /* Tieni sincronizzato aria-expanded del mobileMoreBtn con lo stato sidebar */
+    function syncMoreBtn() {
+        var isOpen = sidebar.classList.contains('open');
+        moreBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     }
+
+    moreBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        /* Riutilizza la logica di toggle già definita in header.php */
+        if (toggle) {
+            toggle.click();
+        } else {
+            /* Fallback diretto se menuToggle non esiste */
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            } else {
+                sidebar.classList.add('open');
+                if (overlay) overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        syncMoreBtn();
+    });
+
+    /* Aggiorna aria-expanded del moreBtn anche quando la sidebar si chiude
+       tramite overlay, tasto Escape o resize */
+    if (overlay) {
+        overlay.addEventListener('click', syncMoreBtn);
+    }
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') syncMoreBtn();
+    });
+    window.addEventListener('resize', function () {
+        if (window.innerWidth >= 1024) syncMoreBtn();
+    });
 })();
 </script>
 
