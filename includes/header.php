@@ -183,6 +183,23 @@ if (!$canReport && isDocente()) {
         .user-dropdown-item.danger { color: #c0392b; }
         .user-dropdown-item.danger svg { color: #c0392b; }
         .user-dropdown-item.danger:hover { background: #fef2f2; color: #c0392b; }
+
+        /* ── Link "Cambia laboratorio" nella sidebar ── */
+        .sidebar-change-lab {
+            display: block;
+            margin-top: .4rem;
+            font-size: .78rem;
+            color: #7dd3d8;
+            text-align: center;
+            text-decoration: none;
+            opacity: .9;
+            transition: color .15s, opacity .15s;
+        }
+        .sidebar-change-lab:hover {
+            color: #a8e6ea;
+            opacity: 1;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -208,9 +225,8 @@ if (!$canReport && isDocente()) {
                         <?php if ($activeLab['is_resp']): ?>&nbsp;&bull;&nbsp;<span style="color:#01696f;font-weight:600"><?= L('label_responsabile') ?></span><?php endif; ?>
                     </div>
                 </div>
-                <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php"
-                   style="display:block;margin-top:.4rem;font-size:.78rem;color:#01696f;text-align:center;text-decoration:none;">
-                    <?= L('nav_cambia_lab') ?>
+                <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="sidebar-change-lab">
+                    ⇄ <?= L('nav_cambia_lab') ?>
                 </a>
             </div>
             <?php endif; ?>
