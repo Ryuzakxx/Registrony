@@ -119,6 +119,7 @@ a:hover { text-decoration: underline; }
     flex-direction: column;
     transition: transform var(--transition);
     border-right: 1px solid rgba(255,255,255,0.04);
+    /* FIX: nessun transform di default — lo gestisce responsive.css */
 }
 
 /* Sidebar Header — brand area */
@@ -301,10 +302,13 @@ a:hover { text-decoration: underline; }
     text-decoration: none;
 }
 
-/* ---- Main Content ---- */
+/* ---- Main Content ----
+   FIX: margin-left:0 di default (mobile-first).
+   Il margine per desktop è aggiunto da responsive.css @media(min-width:1024px)
+*/
 .main-content {
     flex: 1;
-    margin-left: var(--sidebar-width);
+    margin-left: 0;
     min-height: 100vh;
 }
 
@@ -335,8 +339,12 @@ a:hover { text-decoration: underline; }
     gap: 12px;
 }
 
+/* FIX: menu-toggle visibile di default (mobile-first).
+   Su desktop viene nascosto da responsive.css @media(min-width:1024px) */
 .menu-toggle {
-    display: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: var(--text);
@@ -382,10 +390,13 @@ a:hover { text-decoration: underline; }
     border-radius: 0 0 var(--radius) var(--radius);
 }
 
-/* Stat Cards */
+/* Stat Cards
+   FIX: minmax ridotto a 140px per evitare overflow su mobile.
+   responsive.css sovrascrive le colonne a 2 su mobile, 4 su desktop.
+*/
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 16px;
     margin-bottom: 24px;
 }
@@ -408,6 +419,7 @@ a:hover { text-decoration: underline; }
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .stat-card .stat-icon svg { width: 20px; height: 20px; }
@@ -587,7 +599,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .alert-warning { background: var(--warning-light); color: #92400e; border: 1px solid #fde68a; }
 .alert-info    { background: var(--info-light);    color: #155e75; border: 1px solid #a5f3fc; }
 
-/* Bottone × — posizionato a destra, colore uguale al testo dell'alert */
 .alert-close {
     position: absolute;
     right: 12px;
@@ -720,24 +731,17 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 }
 
 /* ============================================================
-   RESPONSIVE
+   SIDEBAR OVERLAY
+   Il blocco responsive vero è in responsive.css.
+   Qui solo la definizione base.
    ============================================================ */
-@media (max-width: 768px) {
-    .sidebar { transform: translateX(-100%); }
-    .sidebar.open { transform: translateX(0); }
-    .main-content { margin-left: 0; }
-    .menu-toggle { display: flex; }
-    .page-content { padding: 16px; }
-    .stats-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-    .stat-card { padding: 14px; }
-    .stat-card .stat-info .stat-value { font-size: 22px; }
-    .form-row { grid-template-columns: 1fr; }
-    .table th, .table td { padding: 8px 10px; font-size: 13px; }
-    .top-header .page-title { font-size: 14px; }
-    .card-header { flex-direction: column; gap: 8px; align-items: flex-start; }
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 999;
 }
-
-.sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 999; }
 .sidebar-overlay.active { display: block; }
 
 /* ============================================================
@@ -756,6 +760,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .mb-2 { margin-bottom: 16px; }
 .mb-3 { margin-bottom: 24px; }
 .d-flex { display: flex; }
+.gap-1 { gap: 6px; }
 .gap-2 { gap: 16px; }
 .align-center { align-items: center; }
 .justify-between { justify-content: space-between; }
