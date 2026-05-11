@@ -173,8 +173,9 @@ if (!$canReport && isDocente()) {
 
         /* Link "Cambia laboratorio" nella sidebar */
         .sidebar-change-lab {
-            display: block; margin-top: .4rem; font-size: .78rem;
-            color: #7dd3d8; text-align: center; text-decoration: none;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+            margin-top: .4rem; font-size: .78rem;
+            color: #7dd3d8; text-decoration: none;
             opacity: .9; transition: color .15s, opacity .15s;
         }
         .sidebar-change-lab:hover { color: #a8e6ea; opacity: 1; text-decoration: underline; }
@@ -204,7 +205,15 @@ if (!$canReport && isDocente()) {
                     </div>
                 </div>
                 <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="sidebar-change-lab">
-                    ⇆ <?= L('nav_cambia_lab') ?>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <polyline points="4 7 10 7 10 3"/>
+                        <polyline points="20 17 14 17 14 21"/>
+                        <line x1="10" y1="7" x2="4" y2="13"/>
+                        <line x1="14" y1="17" x2="20" y2="11"/>
+                    </svg>
+                    <?= L('nav_cambia_lab') ?>
                 </a>
             </div>
             <?php endif; ?>
