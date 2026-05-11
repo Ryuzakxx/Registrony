@@ -67,43 +67,55 @@ if (!$canReport && isDocente()) {
         .sidebar-user {
             position: relative;
         }
+
+        /* CRITICO: reset stili browser per <button>, poi sovrascriviamo */
         .sidebar-user-trigger {
             display: flex;
             align-items: center;
             gap: .65rem;
-            flex: 1;
+            width: 100%;
             min-width: 0;
             padding: .5rem .6rem;
             border-radius: 8px;
             cursor: pointer;
             text-decoration: none;
+            /* Reset browser default button styles */
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: inherit;
+            font-size: inherit;
             color: inherit;
             transition: background .15s;
             -webkit-tap-highlight-color: transparent;
+            text-align: left;
         }
         .sidebar-user-trigger:hover {
             background: rgba(255,255,255,.08);
         }
-        /* Nome e ruolo nella sidebar: sempre bianchi/chiari su sfondo scuro */
+        .sidebar-user-trigger:focus-visible {
+            outline: 2px solid rgba(255,255,255,.3);
+            outline-offset: 2px;
+        }
+        /* Nome: bianco pieno */
         .sidebar-user-trigger .user-name {
-            color: #fff;
+            color: #f1f5f9;
             font-weight: 600;
-            font-size: .875rem;
+            font-size: 13px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        /* Ruolo: grigio chiaro sidebar */
         .sidebar-user-trigger .user-role {
-            color: rgba(255, 255, 255, 0.60);
-            font-size: .75rem;
+            color: #94a3b8;
+            font-size: 11px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             text-transform: capitalize;
         }
-        .sidebar-user-trigger:hover .user-name {
-            color: #fff;
-        }
+
         /* Dropdown profilo */
         .user-dropdown {
             position: absolute;
@@ -299,18 +311,18 @@ if (!$canReport && isDocente()) {
                 </a>
             </div>
 
-            <!-- Trigger: avatar + nome (cliccabile) + pulsante logout -->
+            <!-- Trigger: button trasparente con avatar + nome + chevron -->
             <button class="sidebar-user-trigger" id="userDropdownTrigger"
                     aria-haspopup="true" aria-expanded="false" aria-controls="userDropdown"
                     title="Opzioni profilo">
                 <div class="user-avatar"><?= htmlspecialchars($initials) ?></div>
-                <div class="user-info">
+                <div class="user-info" style="flex:1;min-width:0;">
                     <div class="user-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
                     <div class="user-role"><?= htmlspecialchars(ucfirst($currentUser['ruolo'])) ?></div>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     style="flex-shrink:0;opacity:.5;margin-left:auto;color:#fff" aria-hidden="true"
+                     style="flex-shrink:0;opacity:.5;margin-left:auto;color:#94a3b8" aria-hidden="true"
                      id="userChevron">
                     <polyline points="18 15 12 9 6 15"/>
                 </svg>
