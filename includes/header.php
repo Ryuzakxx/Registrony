@@ -46,6 +46,7 @@ if (!$canReport && isDocente()) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= BASE_PATH ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?= BASE_PATH ?>/assets/css/responsive.css">
     <style>
         .lang-toggle {
             display:inline-flex;align-items:center;gap:4px;padding:4px 10px;
@@ -65,9 +66,9 @@ if (!$canReport && isDocente()) {
 </head>
 <body>
 <div class="app-layout">
-    <div class="sidebar-overlay"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <img src="<?= BASE_PATH ?>/assets/img/logo.svg" alt="Registrony" class="brand-logo">
             <div class="brand-text">
@@ -174,7 +175,7 @@ if (!$canReport && isDocente()) {
     <main class="main-content">
         <header class="top-header">
             <div class="d-flex align-center gap-2">
-                <button class="menu-toggle" aria-label="Menu">
+                <button class="menu-toggle" id="menuToggle" aria-label="Menu" aria-expanded="false" aria-controls="sidebar">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                 </button>
                 <h1 class="page-title"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h1>
@@ -211,3 +212,43 @@ if (!$canReport && isDocente()) {
                     <?= htmlspecialchars($_GET['error']) ?>
                 </div>
             <?php endif; ?>
+
+<script>
+(function () {
+    var sidebar  = document.getElementById('sidebar');
+    var overlay  = document.getElementById('sidebarOverlay');
+    var toggle   = document.getElementById('menuToggle');
+    if (!sidebar || !overlay || !toggle) return;
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+        toggle.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden'; // blocca scroll body su mobile
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        toggle.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+    }
+
+    toggle.addEventListener('click', function () {
+        sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+    });
+
+    // Chiudi cliccando sull'overlay
+    overlay.addEventListener('click', closeSidebar);
+
+    // Chiudi anche premendo Escape
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('open')) closeSidebar();
+    });
+
+    // Chiudi la sidebar se si ridimensiona a desktop
+    window.addEventListener('resize', function () {
+        if (window.innerWidth >= 1024) closeSidebar();
+    });
+})();
+</script>
