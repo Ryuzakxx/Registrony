@@ -41,9 +41,15 @@ document.addEventListener('DOMContentLoaded', function () {
         e.preventDefault();
         toggleSidebar();
     });
-    if (overlay) overlay.addEventListener('click',  closeSidebar);
 
-    /* Chiudi sidebar con Escape o swipe su link nav */
+    /* Overlay chiude sidebar MA non se il click viene dalla sidebar stessa */
+    if (overlay) overlay.addEventListener('click', function (e) {
+        if (!sidebar || !sidebar.contains(e.target)) {
+            closeSidebar();
+        }
+    });
+
+    /* Chiudi sidebar con Escape */
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') { closeSidebar(); closeDropdown(); }
     });
@@ -81,6 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
     /* ================================================================
        DROPDOWN PROFILO UTENTE
        ================================================================ */
+    var userArea     = document.getElementById('sidebarUserArea');
     var userTrigger  = document.getElementById('userDropdownTrigger');
     var userDropdown = document.getElementById('userDropdown');
     var userChevron  = document.getElementById('userChevron');
@@ -102,6 +109,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (userChevron) userChevron.style.transform = 'rotate(0deg)';
     }
 
+    /* Blocca la propagazione sull'intera area utente così l'overlay
+       non intercetta i click sul trigger o sulle voci del dropdown */
+    if (userArea) {
+        userArea.addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+    }
+
     if (userTrigger) {
         userTrigger.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -109,12 +124,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    /* Click fuori dal dropdown lo chiude */
     document.addEventListener('click', function (e) {
-        if (dropOpen && userDropdown &&
-            !userDropdown.contains(e.target) &&
-            e.target !== userTrigger) {
-            closeDropdown();
-        }
+        if (!dropOpen || !userDropdown) return;
+        if (userArea && userArea.contains(e.target)) return;
+        closeDropdown();
     });
 
     /* ================================================================
@@ -194,10 +208,9 @@ document.addEventListener('DOMContentLoaded', function () {
        ================================================================ */
     var currentPath = window.location.pathname;
     document.querySelectorAll('.mobile-bottom-nav a').forEach(function (link) {
-        if (link.id === 'mobileMoreBtn') return; /* skip il toggle menu */
+        if (link.id === 'mobileMoreBtn') return;
         var href = link.getAttribute('href');
         if (!href || href === '#') return;
-        /* Confronta il path normalizzato */
         try {
             var linkPath = new URL(href, window.location.origin).pathname;
             if (currentPath === linkPath ||
