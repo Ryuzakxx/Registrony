@@ -12,6 +12,21 @@ $otherLang      = $currentLang === 'it' ? 'en' : 'it';
 $otherLangLabel = $currentLang === 'it' ? '🇬🇧 EN' : '🇮🇹 IT';
 $currentUrl     = $_SERVER['REQUEST_URI'] ?? '/';
 
+// Carica avatar dalla sessione (aggiornato da profilo.php)
+$userAvatarPath = $_SESSION['user_avatar'] ?? null;
+if (!$userAvatarPath && isset($_SESSION['user_id'])) {
+    // Fallback: leggi dal DB se la sessione non ha ancora l'avatar
+    $connHdr = getConnection();
+    $uidHdr  = (int)$_SESSION['user_id'];
+    if (_columnExists($connHdr, 'utenti', 'avatar')) {
+        $rAvatar = mysqli_query($connHdr, "SELECT avatar FROM utenti WHERE id=$uidHdr LIMIT 1");
+        $rowAv   = mysqli_fetch_assoc($rAvatar);
+        $userAvatarPath = $rowAv['avatar'] ?? null;
+        $_SESSION['user_avatar'] = $userAvatarPath;
+    }
+}
+$headerAvatarUrl = $userAvatarPath ? BASE_PATH . '/' . htmlspecialchars($userAvatarPath) : null;
+
 $activeLab = null;
 if (isDocente() && getSelectedLabId()) {
     $conn2 = getConnection();
@@ -63,12 +78,9 @@ if (!$canReport && isDocente()) {
         }
         .lab-chip-header.resp { background:#01696f;color:#fff;border-color:#01696f; }
 
-        /* ── Sezione utente sidebar cliccabile ── */
-        .sidebar-user {
-            position: relative;
-        }
+        /* ── Sezione utente sidebar ── */
+        .sidebar-user { position: relative; }
 
-        /* CRITICO: reset stili browser per <button>, poi sovrascriviamo */
         .sidebar-user-trigger {
             display: flex;
             align-items: center;
@@ -89,117 +101,83 @@ if (!$canReport && isDocente()) {
             -webkit-tap-highlight-color: transparent;
             text-align: left;
         }
-        .sidebar-user-trigger:hover {
-            background: rgba(255,255,255,.08);
-        }
-        .sidebar-user-trigger:focus-visible {
-            outline: 2px solid rgba(255,255,255,.3);
-            outline-offset: 2px;
-        }
+        .sidebar-user-trigger:hover { background: rgba(255,255,255,.08); }
+        .sidebar-user-trigger:focus-visible { outline: 2px solid rgba(255,255,255,.3); outline-offset: 2px; }
         .sidebar-user-trigger .user-name {
-            color: #f1f5f9;
-            font-weight: 600;
-            font-size: 13px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            color: #f1f5f9; font-weight: 600; font-size: 13px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .sidebar-user-trigger .user-role {
-            color: #94a3b8;
-            font-size: 11px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            color: #94a3b8; font-size: 11px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             text-transform: capitalize;
+        }
+
+        /* Avatar sidebar — foto o iniziali */
+        .sidebar-avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            flex-shrink: 0; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: .8rem; color: #fff;
+            background: rgba(255,255,255,.18);
+            border: 1.5px solid rgba(255,255,255,.25);
+        }
+        .sidebar-avatar img {
+            width: 100%; height: 100%; object-fit: cover;
+            border-radius: 50%; display: block;
         }
 
         /* Dropdown profilo */
         .user-dropdown {
             position: absolute;
             bottom: calc(100% + 8px);
-            left: 0;
-            right: 0;
+            left: 0; right: 0;
             background: #fff;
             border: 1px solid #e5e7eb;
             border-radius: 10px;
             box-shadow: 0 -4px 20px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08);
-            z-index: 200;
-            overflow: hidden;
-            opacity: 0;
-            transform: translateY(6px);
+            z-index: 200; overflow: hidden;
+            opacity: 0; transform: translateY(6px);
             pointer-events: none;
             transition: opacity .18s, transform .18s;
         }
-        .user-dropdown.open {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
+        .user-dropdown.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
         .user-dropdown-header {
             padding: .85rem 1rem .7rem;
             border-bottom: 1px solid #f0f0f0;
             background: #f9fafb;
+            display: flex; align-items: center; gap: .7rem;
         }
-        .user-dropdown-name {
-            font-weight: 700;
-            font-size: .9rem;
-            color: #1a1a1a;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .user-dropdown-avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            flex-shrink: 0; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: .85rem; color: #fff;
+            background: #01696f;
         }
-        .user-dropdown-email {
-            font-size: .75rem;
-            color: #888;
-            margin-top: 1px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        .user-dropdown-avatar img { width:100%;height:100%;object-fit:cover;border-radius:50%;display:block; }
+        .user-dropdown-name { font-weight: 700; font-size: .9rem; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-dropdown-email { font-size: .75rem; color: #888; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .user-dropdown-item {
-            display: flex;
-            align-items: center;
-            gap: .6rem;
-            padding: .6rem 1rem;
-            font-size: .875rem;
-            color: #333;
-            text-decoration: none;
-            transition: background .12s;
+            display: flex; align-items: center; gap: .6rem;
+            padding: .6rem 1rem; font-size: .875rem; color: #333;
+            text-decoration: none; transition: background .12s;
         }
-        .user-dropdown-item:hover {
-            background: #f3f4f6;
-            color: #01696f;
-        }
-        .user-dropdown-item svg {
-            flex-shrink: 0;
-            color: #888;
-        }
+        .user-dropdown-item:hover { background: #f3f4f6; color: #01696f; }
+        .user-dropdown-item svg { flex-shrink: 0; color: #888; }
         .user-dropdown-item:hover svg { color: #01696f; }
-        .user-dropdown-divider {
-            height: 1px;
-            background: #f0f0f0;
-            margin: 2px 0;
-        }
+        .user-dropdown-divider { height: 1px; background: #f0f0f0; margin: 2px 0; }
         .user-dropdown-item.danger { color: #c0392b; }
         .user-dropdown-item.danger svg { color: #c0392b; }
         .user-dropdown-item.danger:hover { background: #fef2f2; color: #c0392b; }
 
-        /* ── Link "Cambia laboratorio" nella sidebar ── */
+        /* Link "Cambia laboratorio" nella sidebar */
         .sidebar-change-lab {
-            display: block;
-            margin-top: .4rem;
-            font-size: .78rem;
-            color: #7dd3d8;
-            text-align: center;
-            text-decoration: none;
-            opacity: .9;
-            transition: color .15s, opacity .15s;
+            display: block; margin-top: .4rem; font-size: .78rem;
+            color: #7dd3d8; text-align: center; text-decoration: none;
+            opacity: .9; transition: color .15s, opacity .15s;
         }
-        .sidebar-change-lab:hover {
-            color: #a8e6ea;
-            opacity: 1;
-            text-decoration: underline;
-        }
+        .sidebar-change-lab:hover { color: #a8e6ea; opacity: 1; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -297,13 +275,21 @@ if (!$canReport && isDocente()) {
             <?php endif; ?>
         </nav>
 
-        <!-- ── Sezione utente in basso ── -->
+        <!-- Sezione utente in basso -->
         <div class="sidebar-user" id="sidebarUserArea">
-            <!-- Dropdown (appare sopra) -->
             <div class="user-dropdown" id="userDropdown" role="menu">
                 <div class="user-dropdown-header">
-                    <div class="user-dropdown-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
-                    <div class="user-dropdown-email"><?= htmlspecialchars($currentUser['email'] ?? '') ?></div>
+                    <div class="user-dropdown-avatar">
+                        <?php if ($headerAvatarUrl): ?>
+                            <img src="<?= $headerAvatarUrl ?>" alt="Foto profilo" loading="lazy">
+                        <?php else: ?>
+                            <?= htmlspecialchars($initials) ?>
+                        <?php endif; ?>
+                    </div>
+                    <div style="min-width:0;">
+                        <div class="user-dropdown-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
+                        <div class="user-dropdown-email"><?= htmlspecialchars($currentUser['email'] ?? '') ?></div>
+                    </div>
                 </div>
                 <a href="<?= BASE_PATH ?>/pages/profilo.php" class="user-dropdown-item" role="menuitem">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -316,11 +302,16 @@ if (!$canReport && isDocente()) {
                 </a>
             </div>
 
-            <!-- Trigger: button trasparente con avatar + nome + chevron -->
             <button class="sidebar-user-trigger" id="userDropdownTrigger"
                     aria-haspopup="true" aria-expanded="false" aria-controls="userDropdown"
                     title="Opzioni profilo">
-                <div class="user-avatar"><?= htmlspecialchars($initials) ?></div>
+                <div class="sidebar-avatar">
+                    <?php if ($headerAvatarUrl): ?>
+                        <img src="<?= $headerAvatarUrl ?>" alt="Foto profilo" loading="lazy">
+                    <?php else: ?>
+                        <?= htmlspecialchars($initials) ?>
+                    <?php endif; ?>
+                </div>
                 <div class="user-info" style="flex:1;min-width:0;">
                     <div class="user-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
                     <div class="user-role"><?= htmlspecialchars(ucfirst($currentUser['ruolo'])) ?></div>
@@ -375,7 +366,6 @@ if (!$canReport && isDocente()) {
 
 <script>
 (function () {
-    /* ── Sidebar mobile ── */
     var sidebar  = document.getElementById('sidebar');
     var overlay  = document.getElementById('sidebarOverlay');
     var toggle   = document.getElementById('menuToggle');
@@ -404,7 +394,6 @@ if (!$canReport && isDocente()) {
         });
     }
 
-    /* ── Dropdown profilo utente ── */
     var trigger  = document.getElementById('userDropdownTrigger');
     var dropdown = document.getElementById('userDropdown');
     var chevron  = document.getElementById('userChevron');

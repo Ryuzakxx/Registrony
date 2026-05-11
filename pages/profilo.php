@@ -19,8 +19,70 @@ function reloadUser(mysqli $conn, int $uid): array {
 
 $user = reloadUser($conn, $uid);
 
+/* ── Cartella upload ── */
+$uploadDir = __DIR__ . '/../uploads/avatars/';
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0755, true);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+
+    /* ── Upload foto profilo ── */
+    if ($action === 'upload_avatar') {
+        $errors = [];
+        if (empty($_FILES['avatar']['tmp_name']) || $_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
+            $errors[] = 'Nessun file selezionato o errore durante il caricamento.';
+        } else {
+            $finfo    = finfo_open(FILEINFO_MIME_TYPE);
+            $mime     = finfo_file($finfo, $_FILES['avatar']['tmp_name']);
+            finfo_close($finfo);
+            $allowed  = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $maxBytes = 2 * 1024 * 1024; // 2 MB
+
+            if (!in_array($mime, $allowed)) {
+                $errors[] = 'Formato non supportato. Usa JPG, PNG, GIF o WebP.';
+            } elseif ($_FILES['avatar']['size'] > $maxBytes) {
+                $errors[] = 'Il file supera il limite di 2 MB.';
+            } else {
+                $ext     = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'][$mime];
+                $newFile = $uid . '_' . time() . '.' . $ext;
+                $destPath = $uploadDir . $newFile;
+
+                // Cancella vecchio avatar se esiste
+                if (!empty($user['avatar'])) {
+                    $old = __DIR__ . '/../' . $user['avatar'];
+                    if (is_file($old)) unlink($old);
+                }
+
+                if (move_uploaded_file($_FILES['avatar']['tmp_name'], $destPath)) {
+                    $relPath = 'uploads/avatars/' . $newFile;
+                    $safe    = mysqli_real_escape_string($conn, $relPath);
+                    mysqli_query($conn, "UPDATE utenti SET avatar='$safe' WHERE id=$uid");
+                    $_SESSION['user_avatar'] = $relPath;
+                    header('Location: ' . BASE_PATH . '/pages/profilo.php?success=' . urlencode('Foto profilo aggiornata.'));
+                } else {
+                    $errors[] = 'Impossibile salvare il file. Controlla i permessi della cartella uploads/avatars/.';
+                }
+            }
+        }
+        if (!empty($errors)) {
+            header('Location: ' . BASE_PATH . '/pages/profilo.php?error=' . urlencode(implode(' | ', $errors)) . '&tab=info');
+        }
+        exit;
+    }
+
+    /* ── Rimuovi foto profilo ── */
+    if ($action === 'remove_avatar') {
+        if (!empty($user['avatar'])) {
+            $old = __DIR__ . '/../' . $user['avatar'];
+            if (is_file($old)) unlink($old);
+        }
+        mysqli_query($conn, "UPDATE utenti SET avatar=NULL WHERE id=$uid");
+        $_SESSION['user_avatar'] = null;
+        header('Location: ' . BASE_PATH . '/pages/profilo.php?success=' . urlencode('Foto profilo rimossa.'));
+        exit;
+    }
 
     if ($action === 'update_info') {
         $nome     = mb_convert_case(mb_strtolower(trim($_POST['nome']    ?? ''), 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
@@ -105,6 +167,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $user      = reloadUser($conn, $uid);
+// Sincronizza avatar in sessione
+$_SESSION['user_avatar'] = $user['avatar'] ?? null;
 $activeTab = $_GET['tab'] ?? 'info';
 
 $sessioni = [];
@@ -142,6 +206,10 @@ if (tableExists($conn, 'segnalazioni')) {
     $totSegnR = $rSegn ? (int)(mysqli_fetch_assoc($rSegn)['n'] ?? 0) : 0;
 }
 
+// Helper: URL avatar o null
+$avatarUrl = !empty($user['avatar']) ? BASE_PATH . '/' . htmlspecialchars($user['avatar']) : null;
+$initials  = strtoupper(mb_substr($user['nome'],0,1,'UTF-8') . mb_substr($user['cognome'],0,1,'UTF-8'));
+
 $pageTitle = 'Il mio profilo';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/form_helpers.php';
@@ -170,19 +238,41 @@ require_once __DIR__ . '/../includes/form_helpers.php';
     background: linear-gradient(135deg, var(--primary) 0%, #1e3a5f 100%);
     padding: 2rem 1.5rem 1.25rem;
     text-align: center;
+    position: relative;
 }
+/* Avatar grande nella card profilo */
 .profilo-avatar-big {
-    width: 72px; height: 72px;
+    width: 80px; height: 80px;
     border-radius: 50%;
     background: rgba(255,255,255,.22);
     color: #fff;
     font-size: 1.75rem;
     font-weight: 700;
     display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 1rem;
-    border: 3px solid rgba(255,255,255,.35);
+    margin: 0 auto .75rem;
+    border: 3px solid rgba(255,255,255,.45);
     letter-spacing: .5px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
 }
+.profilo-avatar-big img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+.profilo-avatar-overlay {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity .18s;
+}
+.profilo-avatar-big:hover .profilo-avatar-overlay { opacity: 1; }
+.profilo-avatar-overlay svg { color: #fff; }
 .profilo-card-name  { color: #f1f5f9; font-weight: 700; font-size: 1.05rem; margin-bottom: .2rem; }
 .profilo-card-role  {
     display: inline-block;
@@ -217,6 +307,7 @@ require_once __DIR__ . '/../includes/form_helpers.php';
     display: flex; gap: .25rem;
     margin-bottom: 1.25rem;
     border-bottom: 2px solid var(--border);
+    flex-wrap: wrap;
 }
 .profilo-tab {
     padding: .55rem 1.1rem;
@@ -253,18 +344,79 @@ require_once __DIR__ . '/../includes/form_helpers.php';
     color: var(--text-light); padding: 4px; line-height: 1;
 }
 .pwd-toggle-btn:hover { color: var(--accent); }
+/* Zone upload avatar */
+.avatar-upload-zone {
+    background: var(--bg);
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: border-color .18s, background .18s;
+    cursor: pointer;
+    position: relative;
+}
+.avatar-upload-zone:hover, .avatar-upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(59,130,246,.04);
+}
+.avatar-upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.avatar-preview {
+    width: 80px; height: 80px; border-radius: 50%;
+    object-fit: cover; border: 3px solid var(--border);
+    margin: 0 auto .75rem; display: block;
+    background: var(--bg-white);
+}
+.avatar-preview-initials {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: var(--primary); color: #fff;
+    font-size: 1.6rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto .75rem;
+    border: 3px solid var(--border);
+    flex-shrink: 0;
+}
 </style>
+
+<?php
+// Helper: mostra avatar o iniziali nella card header
+$hasAvatar = !empty($avatarUrl);
+?>
 
 <div class="profilo-grid">
     <div>
         <div class="profilo-card-user">
             <div class="profilo-card-header">
-                <div class="profilo-avatar-big">
-                    <?= strtoupper(mb_substr($user['nome'],0,1,'UTF-8') . mb_substr($user['cognome'],0,1,'UTF-8')) ?>
-                </div>
+                <!-- Avatar cliccabile → apre file picker -->
+                <label for="avatar-quick-input" style="cursor:pointer;display:block;width:fit-content;margin:0 auto;">
+                    <div class="profilo-avatar-big" title="Clicca per cambiare foto">
+                        <?php if ($hasAvatar): ?>
+                            <img src="<?= $avatarUrl ?>" alt="Foto profilo" loading="lazy">
+                        <?php else: ?>
+                            <?= $initials ?>
+                        <?php endif; ?>
+                        <div class="profilo-avatar-overlay">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        </div>
+                    </div>
+                </label>
+                <!-- Input file nascosto collegato all'avatar -->
+                <form method="POST" enctype="multipart/form-data" id="avatar-quick-form">
+                    <input type="hidden" name="action" value="upload_avatar">
+                    <input type="file" id="avatar-quick-input" name="avatar" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" aria-label="Carica foto profilo">
+                </form>
                 <div class="profilo-card-name"><?= htmlspecialchars($user['nome'] . ' ' . $user['cognome']) ?></div>
                 <div class="profilo-card-role"><?= htmlspecialchars(ucfirst($user['ruolo'])) ?></div>
                 <div class="profilo-card-email"><?= htmlspecialchars($user['email']) ?></div>
+                <?php if ($hasAvatar): ?>
+                <form method="POST" style="margin-top:.6rem;">
+                    <input type="hidden" name="action" value="remove_avatar">
+                    <button type="submit" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.8);font-size:.72rem;padding:3px 10px;border-radius:20px;cursor:pointer;transition:background .15s;" onclick="return confirm('Rimuovere la foto profilo?')">
+                        ✕ Rimuovi foto
+                    </button>
+                </form>
+                <?php endif; ?>
             </div>
             <div class="profilo-stats">
                 <div class="profilo-stat">
@@ -315,6 +467,10 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Informazioni
             </button>
+            <button class="profilo-tab <?= $activeTab === 'avatar' ? 'active' : '' ?>" data-tab="avatar" role="tab" aria-selected="<?= $activeTab === 'avatar' ? 'true' : 'false' ?>">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                Foto profilo
+            </button>
             <button class="profilo-tab <?= $activeTab === 'email' ? 'active' : '' ?>" data-tab="email" role="tab" aria-selected="<?= $activeTab === 'email' ? 'true' : 'false' ?>">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                 Cambia Email
@@ -328,6 +484,8 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 Sessioni recenti
             </button>
         </div>
+
+        <!-- TAB: Informazioni -->
         <div class="profilo-panel card <?= $activeTab === 'info' ? 'active' : '' ?>" id="panel-info" role="tabpanel">
             <div class="card-header"><h3>Informazioni personali</h3></div>
             <div class="card-body">
@@ -348,6 +506,43 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 </form>
             </div>
         </div>
+
+        <!-- TAB: Foto profilo -->
+        <div class="profilo-panel card <?= $activeTab === 'avatar' ? 'active' : '' ?>" id="panel-avatar" role="tabpanel">
+            <div class="card-header"><h3>Foto profilo</h3></div>
+            <div class="card-body">
+                <p style="font-size:.875rem;color:var(--text-light);margin-bottom:1.25rem;">
+                    Carica una foto che verrà mostrata nell'app. JPG, PNG, GIF o WebP — max 2 MB.
+                </p>
+                <form method="POST" enctype="multipart/form-data" novalidate id="form-avatar-upload">
+                    <input type="hidden" name="action" value="upload_avatar">
+                    <div class="avatar-upload-zone" id="avatarDropZone">
+                        <input type="file" name="avatar" id="avatarFile" accept="image/jpeg,image/png,image/gif,image/webp" aria-label="Seleziona foto profilo">
+                        <?php if ($hasAvatar): ?>
+                            <img src="<?= $avatarUrl ?>" alt="Anteprima foto" class="avatar-preview" id="avatarPreview">
+                        <?php else: ?>
+                            <div class="avatar-preview-initials" id="avatarPreviewInitials"><?= $initials ?></div>
+                            <img src="" alt="Anteprima" class="avatar-preview" id="avatarPreview" style="display:none">
+                        <?php endif; ?>
+                        <p style="font-size:.85rem;color:var(--text-light);margin:.25rem 0 0;">
+                            <strong>Clicca</strong> o trascina qui la tua foto
+                        </p>
+                        <p style="font-size:.75rem;color:var(--text-light);margin:.2rem 0 0;">JPG, PNG, GIF, WebP &bull; max 2 MB</p>
+                    </div>
+                    <div style="margin-top:1rem;display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+                        <button type="submit" class="btn btn-primary" id="btnSaveAvatar" disabled>Salva foto</button>
+                        <?php if ($hasAvatar): ?>
+                        <form method="POST" style="margin:0;">
+                            <input type="hidden" name="action" value="remove_avatar">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Rimuovere la foto profilo?')">Rimuovi foto</button>
+                        </form>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB: Cambia Email -->
         <div class="profilo-panel card <?= $activeTab === 'email' ? 'active' : '' ?>" id="panel-email" role="tabpanel">
             <div class="card-header"><h3>Cambia indirizzo email</h3></div>
             <div class="card-body">
@@ -372,6 +567,8 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 </form>
             </div>
         </div>
+
+        <!-- TAB: Cambia Password -->
         <div class="profilo-panel card <?= $activeTab === 'password' ? 'active' : '' ?>" id="panel-password" role="tabpanel">
             <div class="card-header"><h3>Cambia password</h3></div>
             <div class="card-body">
@@ -412,6 +609,8 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 </form>
             </div>
         </div>
+
+        <!-- TAB: Sessioni recenti -->
         <div class="profilo-panel card <?= $activeTab === 'sessioni' ? 'active' : '' ?>" id="panel-sessioni" role="tabpanel">
             <div class="card-header">
                 <h3>Sessioni recenti <?php if ($totSess > 0): ?><small style="font-weight:400;font-size:.8rem;color:var(--text-light)">(ultime 8 di <?= $totSess ?>)</small><?php endif; ?></h3>
@@ -450,6 +649,7 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 <?php formFieldScripts(); ?>
 
 <script>
+/* Tab navigation */
 (function () {
     const tabs = document.querySelectorAll('.profilo-tab');
     const panels = document.querySelectorAll('.profilo-panel');
@@ -464,6 +664,61 @@ require_once __DIR__ . '/../includes/form_helpers.php';
         });
     });
 })();
+
+/* Avatar: anteprima in tempo reale + submit auto dal click nell'header */
+(function () {
+    function handleFile(file, previewEl, initialsEl, btnSave) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            if (previewEl) { previewEl.src = e.target.result; previewEl.style.display = 'block'; }
+            if (initialsEl) initialsEl.style.display = 'none';
+            if (btnSave) btnSave.disabled = false;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /* Picker rapido dall'header */
+    var quickInput = document.getElementById('avatar-quick-input');
+    var quickForm  = document.getElementById('avatar-quick-form');
+    if (quickInput && quickForm) {
+        quickInput.addEventListener('change', function () {
+            if (quickInput.files && quickInput.files[0]) quickForm.submit();
+        });
+    }
+
+    /* Tab foto profilo */
+    var fileInput   = document.getElementById('avatarFile');
+    var preview     = document.getElementById('avatarPreview');
+    var initials    = document.getElementById('avatarPreviewInitials');
+    var btnSave     = document.getElementById('btnSaveAvatar');
+    var dropZone    = document.getElementById('avatarDropZone');
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function () {
+            if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0], preview, initials, btnSave);
+        });
+    }
+    if (dropZone) {
+        dropZone.addEventListener('dragover', function (e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', function () { dropZone.classList.remove('drag-over'); });
+        dropZone.addEventListener('drop', function (e) {
+            e.preventDefault(); dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                // Crea un DataTransfer per assegnare il file all'input
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    fileInput.files = dt.files;
+                } catch(ex) {}
+                handleFile(file, preview, initials, btnSave);
+            }
+        });
+    }
+})();
+
+/* Password strength */
 (function () {
     const pwd = document.getElementById('new_password');
     const bar = document.getElementById('pwdBar');
@@ -494,6 +749,8 @@ require_once __DIR__ . '/../includes/form_helpers.php';
         label.style.color = l.color;
     });
 })();
+
+/* Conferma password */
 (function () {
     const form = document.getElementById('formPwd');
     if (!form) return;
