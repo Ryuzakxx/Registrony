@@ -62,6 +62,101 @@ if (!$canReport && isDocente()) {
             text-decoration:none;cursor:default;
         }
         .lab-chip-header.resp { background:#01696f;color:#fff;border-color:#01696f; }
+
+        /* ── Sezione utente sidebar cliccabile ── */
+        .sidebar-user {
+            position: relative;
+        }
+        .sidebar-user-trigger {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            flex: 1;
+            min-width: 0;
+            padding: .5rem .6rem;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            transition: background .15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .sidebar-user-trigger:hover {
+            background: rgba(255,255,255,.08);
+        }
+        .sidebar-user-trigger:hover .user-name {
+            color: #fff;
+        }
+        /* Dropdown profilo */
+        .user-dropdown {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08);
+            z-index: 200;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(6px);
+            pointer-events: none;
+            transition: opacity .18s, transform .18s;
+        }
+        .user-dropdown.open {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .user-dropdown-header {
+            padding: .85rem 1rem .7rem;
+            border-bottom: 1px solid #f0f0f0;
+            background: #f9fafb;
+        }
+        .user-dropdown-name {
+            font-weight: 700;
+            font-size: .9rem;
+            color: #1a1a1a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .user-dropdown-email {
+            font-size: .75rem;
+            color: #888;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .user-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .6rem 1rem;
+            font-size: .875rem;
+            color: #333;
+            text-decoration: none;
+            transition: background .12s;
+        }
+        .user-dropdown-item:hover {
+            background: #f3f4f6;
+            color: #01696f;
+        }
+        .user-dropdown-item svg {
+            flex-shrink: 0;
+            color: #888;
+        }
+        .user-dropdown-item:hover svg { color: #01696f; }
+        .user-dropdown-divider {
+            height: 1px;
+            background: #f0f0f0;
+            margin: 2px 0;
+        }
+        .user-dropdown-item.danger { color: #c0392b; }
+        .user-dropdown-item.danger svg { color: #c0392b; }
+        .user-dropdown-item.danger:hover { background: #fef2f2; color: #c0392b; }
     </style>
 </head>
 <body>
@@ -160,15 +255,49 @@ if (!$canReport && isDocente()) {
             <?php endif; ?>
         </nav>
 
-        <div class="sidebar-user">
-            <div class="user-avatar"><?= htmlspecialchars($initials) ?></div>
-            <div class="user-info">
-                <div class="user-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
-                <div class="user-role"><?= htmlspecialchars($currentUser['ruolo']) ?></div>
+        <!-- ── Sezione utente in basso ── -->
+        <div class="sidebar-user" id="sidebarUserArea">
+            <!-- Dropdown (appare sopra) -->
+            <div class="user-dropdown" id="userDropdown" role="menu">
+                <div class="user-dropdown-header">
+                    <div class="user-dropdown-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
+                    <div class="user-dropdown-email"><?= htmlspecialchars($currentUser['email'] ?? '') ?></div>
+                </div>
+                <a href="<?= BASE_PATH ?>/pages/profilo.php" class="user-dropdown-item" role="menuitem">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Il mio profilo
+                </a>
+                <a href="<?= BASE_PATH ?>/pages/profilo.php?tab=email" class="user-dropdown-item" role="menuitem">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    Cambia email
+                </a>
+                <a href="<?= BASE_PATH ?>/pages/profilo.php?tab=password" class="user-dropdown-item" role="menuitem">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Cambia password
+                </a>
+                <div class="user-dropdown-divider"></div>
+                <a href="<?= BASE_PATH ?>/logout.php" class="user-dropdown-item danger" role="menuitem">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Esci
+                </a>
             </div>
-            <a href="<?= BASE_PATH ?>/logout.php" class="logout-btn" title="Esci">
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </a>
+
+            <!-- Trigger: avatar + nome (cliccabile) + pulsante logout -->
+            <button class="sidebar-user-trigger" id="userDropdownTrigger"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="userDropdown"
+                    title="Opzioni profilo">
+                <div class="user-avatar"><?= htmlspecialchars($initials) ?></div>
+                <div class="user-info">
+                    <div class="user-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
+                    <div class="user-role"><?= htmlspecialchars($currentUser['ruolo']) ?></div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     style="flex-shrink:0;opacity:.5;margin-left:auto" aria-hidden="true"
+                     id="userChevron">
+                    <polyline points="18 15 12 9 6 15"/>
+                </svg>
+            </button>
         </div>
     </aside>
 
@@ -215,40 +344,63 @@ if (!$canReport && isDocente()) {
 
 <script>
 (function () {
+    /* ── Sidebar mobile ── */
     var sidebar  = document.getElementById('sidebar');
     var overlay  = document.getElementById('sidebarOverlay');
     var toggle   = document.getElementById('menuToggle');
-    if (!sidebar || !overlay || !toggle) return;
-
-    function openSidebar() {
-        sidebar.classList.add('open');
-        overlay.classList.add('active');
-        toggle.setAttribute('aria-expanded', 'true');
-        document.body.style.overflow = 'hidden'; // blocca scroll body su mobile
+    if (sidebar && overlay && toggle) {
+        function openSidebar() {
+            sidebar.classList.add('open');
+            overlay.classList.add('active');
+            toggle.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+            toggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+        toggle.addEventListener('click', function () {
+            sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+        });
+        overlay.addEventListener('click', closeSidebar);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && sidebar.classList.contains('open')) closeSidebar();
+        });
+        window.addEventListener('resize', function () {
+            if (window.innerWidth >= 1024) closeSidebar();
+        });
     }
 
-    function closeSidebar() {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('active');
-        toggle.setAttribute('aria-expanded', 'false');
-        document.body.style.overflow = '';
+    /* ── Dropdown profilo utente ── */
+    var trigger  = document.getElementById('userDropdownTrigger');
+    var dropdown = document.getElementById('userDropdown');
+    var chevron  = document.getElementById('userChevron');
+    if (trigger && dropdown) {
+        var open = false;
+        function openDropdown() {
+            open = true;
+            dropdown.classList.add('open');
+            trigger.setAttribute('aria-expanded','true');
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+        }
+        function closeDropdown() {
+            open = false;
+            dropdown.classList.remove('open');
+            trigger.setAttribute('aria-expanded','false');
+            if (chevron) chevron.style.transform = '';
+        }
+        trigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            open ? closeDropdown() : openDropdown();
+        });
+        document.addEventListener('click', function (e) {
+            if (open && !dropdown.contains(e.target)) closeDropdown();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && open) closeDropdown();
+        });
     }
-
-    toggle.addEventListener('click', function () {
-        sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
-    });
-
-    // Chiudi cliccando sull'overlay
-    overlay.addEventListener('click', closeSidebar);
-
-    // Chiudi anche premendo Escape
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && sidebar.classList.contains('open')) closeSidebar();
-    });
-
-    // Chiudi la sidebar se si ridimensiona a desktop
-    window.addEventListener('resize', function () {
-        if (window.innerWidth >= 1024) closeSidebar();
-    });
 })();
 </script>
