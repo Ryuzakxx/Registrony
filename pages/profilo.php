@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$nome)    $errors[] = 'Il nome è obbligatorio.';
         if (!$cognome) $errors[] = 'Il cognome è obbligatorio.';
-        if ($telefono && !preg_match('/^[0-9\s\+\-\.()]{7,25}$/', $telefono)) $errors[] = 'Formato telefono non valido.';
+        if ($telefono && !preg_match('/^[0-9\s\+\-\.()\]{7,25}$/', $telefono)) $errors[] = 'Formato telefono non valido.';
 
         if (empty($errors)) {
             $n_e  = mysqli_real_escape_string($conn, $nome);
@@ -116,31 +116,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $user      = reloadUser($conn, $uid);
 $activeTab = $_GET['tab'] ?? 'info';
 
-// Sessioni recenti — solo se la tabella esiste
+// Sessioni recenti — il docente è collegato tramite firme_sessioni
 $sessioni = [];
 $totSess  = 0;
-if (tableExists($conn, 'sessioni')) {
+if (tableExists($conn, 'sessioni_laboratorio')) {
     $rSess = mysqli_query($conn, "
-        SELECT s.id, s.data_inizio, s.data_fine, s.note,
-               l.nome AS lab_nome, l.aula AS lab_aula,
-               c.nome AS classe_nome
-        FROM sessioni s
-        LEFT JOIN laboratori l ON s.id_laboratorio = l.id
-        LEFT JOIN classi c ON s.id_classe = c.id
-        WHERE s.id_docente = $uid
-        ORDER BY s.data_inizio DESC
+        SELECT sl.id,
+               sl.data,
+               sl.ora_ingresso,
+               sl.ora_uscita,
+               sl.attivita_svolta AS note,
+               l.nome  AS lab_nome,
+               l.aula  AS lab_aula,
+               c.nome  AS classe_nome
+        FROM sessioni_laboratorio sl
+        INNER JOIN firme_sessioni fs ON fs.id_sessione = sl.id AND fs.id_docente = $uid
+        LEFT  JOIN laboratori l ON l.id = sl.id_laboratorio
+        LEFT  JOIN classi     c ON c.id = sl.id_classe
+        ORDER BY sl.data DESC, sl.ora_ingresso DESC
         LIMIT 8
     ");
     if ($rSess) while ($row = mysqli_fetch_assoc($rSess)) $sessioni[] = $row;
 
-    $rTot = mysqli_query($conn, "SELECT COUNT(*) AS n FROM sessioni WHERE id_docente = $uid");
+    $rTot = mysqli_query($conn, "
+        SELECT COUNT(*) AS n
+        FROM sessioni_laboratorio sl
+        INNER JOIN firme_sessioni fs ON fs.id_sessione = sl.id AND fs.id_docente = $uid
+    ");
     $totSess = $rTot ? (int)(mysqli_fetch_assoc($rTot)['n'] ?? 0) : 0;
 }
 
-// Segnalazioni — solo se la tabella esiste
+// Segnalazioni — la colonna è id_utente, non id_docente
 $totSegnR = 0;
 if (tableExists($conn, 'segnalazioni')) {
-    $rSegn = mysqli_query($conn, "SELECT COUNT(*) AS n FROM segnalazioni WHERE id_docente = $uid");
+    $rSegn = mysqli_query($conn, "SELECT COUNT(*) AS n FROM segnalazioni WHERE id_utente = $uid");
     $totSegnR = $rSegn ? (int)(mysqli_fetch_assoc($rSegn)['n'] ?? 0) : 0;
 }
 
@@ -493,7 +502,7 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                     <div class="empty-state">
                         <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         <h4>Nessuna sessione registrata</h4>
-                        <p style="font-size:.875rem">Le sessioni che crei compariranno qui.</p>
+                        <p style="font-size:.875rem">Le sessioni che firmi compariranno qui.</p>
                     </div>
                 <?php else: ?>
                     <div class="sessioni-list">
@@ -501,14 +510,14 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                         <div class="sessione-row">
                             <div class="sessione-dot"></div>
                             <div class="sessione-info">
-                                <div class="sessione-date"><?= date('d/m/Y H:i', strtotime($s['data_inizio'])) ?></div>
+                                <div class="sessione-date"><?= htmlspecialchars($s['data']) ?> &mdash; <?= htmlspecialchars($s['ora_ingresso']) ?></div>
                                 <div class="sessione-meta">
                                     <?= htmlspecialchars($s['lab_nome'] ?? '—') ?>
                                     &bull; Aula <?= htmlspecialchars($s['lab_aula'] ?? '—') ?>
                                     <?php if ($s['classe_nome']): ?> &bull; <?= htmlspecialchars($s['classe_nome']) ?><?php endif; ?>
                                 </div>
                             </div>
-                            <span class="sessione-badge"><?= $s['data_fine'] ? 'Chiusa' : 'Aperta' ?></span>
+                            <span class="sessione-badge"><?= $s['ora_uscita'] ? 'Chiusa' : 'Aperta' ?></span>
                         </div>
                         <?php endforeach; ?>
                     </div>
