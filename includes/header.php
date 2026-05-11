@@ -79,7 +79,6 @@ if (!$canReport && isDocente()) {
             border-radius: 8px;
             cursor: pointer;
             text-decoration: none;
-            /* Reset browser default button styles */
             background: transparent;
             border: none;
             outline: none;
@@ -97,7 +96,6 @@ if (!$canReport && isDocente()) {
             outline: 2px solid rgba(255,255,255,.3);
             outline-offset: 2px;
         }
-        /* Nome: bianco pieno */
         .sidebar-user-trigger .user-name {
             color: #f1f5f9;
             font-weight: 600;
@@ -106,7 +104,6 @@ if (!$canReport && isDocente()) {
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        /* Ruolo: grigio chiaro sidebar */
         .sidebar-user-trigger .user-role {
             color: #94a3b8;
             font-size: 11px;
@@ -296,14 +293,6 @@ if (!$canReport && isDocente()) {
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     Il mio profilo
                 </a>
-                <a href="<?= BASE_PATH ?>/pages/profilo.php?tab=email" class="user-dropdown-item" role="menuitem">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                    Cambia email
-                </a>
-                <a href="<?= BASE_PATH ?>/pages/profilo.php?tab=password" class="user-dropdown-item" role="menuitem">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    Cambia password
-                </a>
                 <div class="user-dropdown-divider"></div>
                 <a href="<?= BASE_PATH ?>/logout.php" class="user-dropdown-item danger" role="menuitem">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -347,9 +336,6 @@ if (!$canReport && isDocente()) {
             </div>
             <div class="header-actions">
                 <span class="text-muted"><?= date('d/m/Y') ?></span>
-                <?php if (isDocente() && $activeLab): ?>
-                    <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="lang-toggle" title="<?= L('nav_cambia_lab') ?>"><?= L('nav_cambia_lab_short') ?></a>
-                <?php endif; ?>
                 <a href="<?= BASE_PATH ?>/lang/set_lang.php?lang=<?= urlencode($otherLang) ?>&redirect=<?= urlencode($currentUrl) ?>"
                    class="lang-toggle"
                    title="<?= $currentLang === 'it' ? 'Switch to English' : 'Passa all\'italiano' ?>">

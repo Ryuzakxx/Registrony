@@ -60,27 +60,6 @@ if (isDocente()) {
         $sessions[] = $row;
     }
 
-    $resSgns = mysqli_query($conn, "
-        SELECT sg.id, sg.titolo, sg.priorita, sg.stato, sg.data_segnalazione,
-               CONCAT(u.cognome, ' ', u.nome) AS segnalato_da
-        FROM segnalazioni sg
-        JOIN utenti u ON sg.id_utente = u.id
-        WHERE sg.id_laboratorio = $labId AND sg.stato IN ('aperta','in_lavorazione')
-        ORDER BY FIELD(sg.priorita,'urgente','alta','media','bassa'), sg.data_segnalazione DESC
-        LIMIT 6
-    ");
-    $segnalazioni = [];
-    while ($r = mysqli_fetch_assoc($resSgns)) $segnalazioni[] = $r;
-
-    $resMat2 = mysqli_query($conn, "
-        SELECT nome, unita_misura, quantita_disponibile, soglia_minima
-        FROM materiali
-        WHERE id_laboratorio = $labId AND attivo = 1
-        ORDER BY nome
-    ");
-    $materiali = [];
-    while ($r = mysqli_fetch_assoc($resMat2)) $materiali[] = $r;
-
     $resDates = mysqli_query($conn, "
         SELECT DISTINCT data FROM sessioni_laboratorio
         WHERE id_laboratorio = $labId AND data <= '$today'
@@ -109,40 +88,24 @@ if (isDocente()) {
             </div>
         </div>
     </div>
-    <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="btn btn-secondary btn-sm">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-        <?= L('nav_cambia_lab') ?>
-    </a>
-</div>
-
-<!-- ===================== KPI CARDS ===================== -->
-<div class="stats-grid dash-kpi">
-    <div class="stat-card">
-        <div class="stat-icon green">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <!-- KPI inline nel banner -->
+    <div class="banner-kpi">
+        <div class="banner-kpi-item">
+            <span class="banner-kpi-val green"><?= $totS ?></span>
+            <span class="banner-kpi-label"><?= L('dash_sessioni_oggi') ?></span>
         </div>
-        <div class="stat-info">
-            <div class="stat-value"><?= $totS ?></div>
-            <div class="stat-label"><?= L('dash_sessioni_oggi') ?></div>
+        <?php if ($totSgn > 0): ?>
+        <div class="banner-kpi-item">
+            <span class="banner-kpi-val orange"><?= $totSgn ?></span>
+            <span class="banner-kpi-label"><?= L('dash_segnalazioni_aperte') ?></span>
         </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon orange">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <?php endif; ?>
+        <?php if ($totMat > 0): ?>
+        <div class="banner-kpi-item">
+            <span class="banner-kpi-val red"><?= $totMat ?></span>
+            <span class="banner-kpi-label"><?= L('dash_mat_esaurimento') ?></span>
         </div>
-        <div class="stat-info">
-            <div class="stat-value"><?= $totSgn ?></div>
-            <div class="stat-label"><?= L('dash_segnalazioni_aperte') ?></div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon red">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-        </div>
-        <div class="stat-info">
-            <div class="stat-value"><?= $totMat ?></div>
-            <div class="stat-label"><?= L('dash_mat_esaurimento') ?></div>
-        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -179,21 +142,30 @@ if (isDocente()) {
             </div>
         <?php else: ?>
             <div class="registro-timeline">
-                <?php foreach ($sessions as $idx => $s): ?>
+                <?php foreach ($sessions as $idx => $s):
+                    $durata = '';
+                    if ($s['ora_ingresso'] && $s['ora_uscita']) {
+                        $inizio = strtotime($s['ora_ingresso']);
+                        $fine   = strtotime($s['ora_uscita']);
+                        $min    = round(($fine - $inizio) / 60);
+                        if ($min > 0) $durata = $min . ' min';
+                    }
+                ?>
                 <div class="registro-entry">
                     <div class="registro-orario">
                         <span class="ora-ingresso"><?= htmlspecialchars(substr($s['ora_ingresso'], 0, 5)) ?></span>
                         <?php if ($s['ora_uscita']): ?>
                             <span class="ora-sep">&#8595;</span>
                             <span class="ora-uscita"><?= htmlspecialchars(substr($s['ora_uscita'], 0, 5)) ?></span>
+                            <?php if ($durata): ?><span class="ora-durata"><?= $durata ?></span><?php endif; ?>
                         <?php else: ?>
-                            <span class="badge badge-success" style="font-size:.7rem;margin-top:4px"><?= L('sess_in_corso') ?></span>
+                            <span class="badge badge-success" style="font-size:.68rem;margin-top:4px;padding:2px 6px"><?= L('sess_in_corso') ?></span>
                         <?php endif; ?>
                     </div>
                     <div class="registro-body">
                         <div class="registro-header-row">
-                            <span class="badge badge-primary"><?= htmlspecialchars($s['classe']) ?></span>
-                            <a href="<?= BASE_PATH ?>/pages/sessioni/dettaglio.php?id=<?= $s['id'] ?>" class="btn btn-secondary btn-sm" style="padding:2px 10px;font-size:.78rem"><?= L('dettagli') ?></a>
+                            <span class="badge badge-primary badge-classe"><?= htmlspecialchars($s['classe']) ?></span>
+                            <a href="<?= BASE_PATH ?>/pages/sessioni/dettaglio.php?id=<?= $s['id'] ?>" class="btn btn-secondary btn-sm btn-dettagli"><?= L('dettagli') ?></a>
                         </div>
                         <?php if (!empty($s['attivita_svolta'])): ?>
                             <div class="registro-attivita"><?= htmlspecialchars($s['attivita_svolta']) ?></div>
@@ -250,140 +222,6 @@ if (isDocente()) {
     </div>
 </div>
 
-<!-- ===================== SEGNALAZIONI ===================== -->
-<div class="card">
-    <div class="card-header">
-        <h3>
-            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <?= L('dash_segnalazioni_titolo') ?>
-        </h3>
-        <div class="d-flex gap-2">
-            <a href="<?= BASE_PATH ?>/pages/segnalazioni/nuova.php" class="btn btn-warning btn-sm"><?= L('segn_btn_nuova') ?></a>
-            <a href="<?= BASE_PATH ?>/pages/segnalazioni/index.php" class="btn btn-secondary btn-sm"><?= L('vedi_tutte') ?></a>
-        </div>
-    </div>
-    <div class="card-body">
-        <?php if (empty($segnalazioni)): ?>
-            <div class="empty-state">
-                <div class="empty-icon" style="color:#22c55e">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
-                <h4><?= L('dash_tutto_ok') ?></h4>
-            </div>
-        <?php else: ?>
-            <!-- DESKTOP: tabella normale -->
-            <div class="table-responsive dash-table-desktop">
-                <table class="table">
-                    <thead><tr>
-                        <th><?= L('segn_titolo_campo') ?></th>
-                        <th><?= L('segn_priorita') ?></th>
-                        <th><?= L('segn_stato') ?></th>
-                        <th><?= L('segn_segnalato_da') ?></th>
-                        <th><?= L('segn_data') ?></th>
-                        <th></th>
-                    </tr></thead>
-                    <tbody>
-                        <?php foreach ($segnalazioni as $sg): ?>
-                        <?php
-                            $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' };
-                            $sc = $sg['stato'] === 'aperta' ? 'badge-danger' : 'badge-warning';
-                            $prioLabel = match($sg['priorita']) { 'urgente'=>L('segn_prio_urgente'),'alta'=>L('segn_prio_alta'),'media'=>L('segn_prio_media'),default=>L('segn_prio_bassa') };
-                            $statoLabel = match($sg['stato']) { 'aperta'=>L('segn_stato_aperta'),'in_lavorazione'=>L('segn_stato_in_lavorazione'),'risolta'=>L('segn_stato_risolta'),default=>L('segn_stato_chiusa') };
-                        ?>
-                        <tr>
-                            <td><strong><?= htmlspecialchars($sg['titolo']) ?></strong></td>
-                            <td><span class="badge <?= $bc ?>"><?= $prioLabel ?></span></td>
-                            <td><span class="badge <?= $sc ?>"><?= $statoLabel ?></span></td>
-                            <td><?= htmlspecialchars($sg['segnalato_da']) ?></td>
-                            <td><?= date('d/m/Y', strtotime($sg['data_segnalazione'])) ?></td>
-                            <td><a href="<?= BASE_PATH ?>/pages/segnalazioni/dettaglio.php?id=<?= $sg['id'] ?>" class="btn btn-primary btn-sm"><?= L('dettagli') ?></a></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <!-- MOBILE: card list -->
-            <div class="dash-card-list dash-table-mobile">
-                <?php foreach ($segnalazioni as $sg):
-                    $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' };
-                    $sc = $sg['stato'] === 'aperta' ? 'badge-danger' : 'badge-warning';
-                    $prioLabel = match($sg['priorita']) { 'urgente'=>L('segn_prio_urgente'),'alta'=>L('segn_prio_alta'),'media'=>L('segn_prio_media'),default=>L('segn_prio_bassa') };
-                    $statoLabel = match($sg['stato']) { 'aperta'=>L('segn_stato_aperta'),'in_lavorazione'=>L('segn_stato_in_lavorazione'),'risolta'=>L('segn_stato_risolta'),default=>L('segn_stato_chiusa') }; ?>
-                <div class="dcl-item">
-                    <div class="dcl-main">
-                        <span class="dcl-title"><?= htmlspecialchars($sg['titolo']) ?></span>
-                        <div class="dcl-badges">
-                            <span class="badge <?= $bc ?>"><?= $prioLabel ?></span>
-                            <span class="badge <?= $sc ?>"><?= $statoLabel ?></span>
-                        </div>
-                    </div>
-                    <div class="dcl-meta">
-                        <span><?= htmlspecialchars($sg['segnalato_da']) ?></span>
-                        <span><?= date('d/m/Y', strtotime($sg['data_segnalazione'])) ?></span>
-                    </div>
-                    <a href="<?= BASE_PATH ?>/pages/segnalazioni/dettaglio.php?id=<?= $sg['id'] ?>" class="btn btn-primary btn-sm dcl-btn"><?= L('dettagli') ?></a>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-    </div>
-</div>
-
-<!-- ===================== MATERIALI ===================== -->
-<div class="card">
-    <div class="card-header">
-        <h3>
-            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            <?= L('mat_titolo_lista') ?>
-        </h3>
-        <?php if ($isResponsabile): ?>
-            <a href="<?= BASE_PATH ?>/pages/materiali/gestione.php?laboratorio=<?= $labId ?>" class="btn btn-primary btn-sm">&#128393; <?= L('mat_titolo_gest') ?></a>
-        <?php endif; ?>
-    </div>
-    <div class="card-body">
-        <?php if (empty($materiali)): ?>
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-                </div>
-                <h4><?= L('mat_nessuno') ?></h4>
-                <?php if ($isResponsabile): ?>
-                    <p><a href="<?= BASE_PATH ?>/pages/materiali/gestione.php"><?= L('mat_btn_crea') ?></a></p>
-                <?php endif; ?>
-            </div>
-        <?php else: ?>
-            <div class="materiali-grid">
-                <?php foreach ($materiali as $m):
-                    $stato = 'ok';
-                    if ($m['quantita_disponibile'] !== null && $m['quantita_disponibile'] <= 0) $stato = 'esaurito';
-                    elseif ($m['quantita_disponibile'] !== null && $m['soglia_minima'] !== null && $m['quantita_disponibile'] <= $m['soglia_minima']) $stato = 'basso';
-                ?>
-                <div class="materiale-card materiale-<?= $stato ?>">
-                    <div class="materiale-nome"><?= htmlspecialchars($m['nome']) ?></div>
-                    <div class="materiale-qty">
-                        <?php if ($m['quantita_disponibile'] !== null): ?>
-                            <strong><?= $m['quantita_disponibile'] ?></strong>
-                            <span class="materiale-unita"><?= htmlspecialchars($m['unita_misura'] ?? '') ?></span>
-                        <?php else: ?>
-                            <span style="color:#aaa"><?= L('mat_stato_nd') ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="materiale-stato">
-                        <?php if ($stato === 'esaurito'): ?>
-                            <span class="badge badge-danger"><?= L('mat_stato_esaurito') ?></span>
-                        <?php elseif ($stato === 'basso'): ?>
-                            <span class="badge badge-warning"><?= L('mat_stato_esaurimento') ?></span>
-                        <?php else: ?>
-                            <span class="badge badge-success"><?= L('mat_stato_ok') ?></span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-    </div>
-</div>
-
 <style>
 /* ======================================================
    DASHBOARD — stili specifici (registro docente)
@@ -398,12 +236,39 @@ if (isDocente()) {
 }
 .registro-banner-left { display:flex; align-items:center; gap:.85rem; min-width:0; }
 .registro-lab-icon { color:#01696f; flex-shrink:0; }
-.registro-lab-nome { font-size:1.1rem; font-weight:700; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.registro-lab-nome { font-size:1.05rem; font-weight:700; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .registro-lab-meta { font-size:.82rem; color:#777; margin-top:2px; }
 .badge-resp { background:#01696f; color:#fff; border-radius:20px; padding:1px 8px; font-size:.75rem; font-weight:600; }
 
-/* KPI: 3 colonne su desktop, 3 mini su mobile */
-.dash-kpi { margin-bottom:1.25rem; }
+/* KPI inline nel banner */
+.banner-kpi {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-shrink: 0;
+}
+.banner-kpi-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+.banner-kpi-val {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.banner-kpi-val.green  { color: #16a34a; }
+.banner-kpi-val.orange { color: #d97706; }
+.banner-kpi-val.red    { color: #dc2626; }
+.banner-kpi-label {
+    font-size: .7rem;
+    color: #888;
+    text-align: center;
+    max-width: 70px;
+    line-height: 1.2;
+}
 
 /* Card header con filtro data */
 .dash-card-header { flex-wrap: wrap; gap: 10px; }
@@ -431,70 +296,43 @@ if (isDocente()) {
 
 /* Timeline sessioni */
 .registro-timeline { display:flex; flex-direction:column; gap:0; }
-.registro-entry { display:flex; gap:1.1rem; padding:.9rem 0; }
-.registro-divider { height:1px; background:#e8e6e0; margin:0 0 0 68px; }
+.registro-entry { display:flex; gap:1.1rem; padding:1rem 0; }
+.registro-divider { height:1px; background:#edeae4; margin:0 0 0 68px; }
 .registro-orario {
     display:flex; flex-direction:column; align-items:center; min-width:52px;
     font-family:monospace; font-size:.85rem; color:#555; flex-shrink:0; padding-top:2px;
 }
-.ora-ingresso { font-weight:700; color:#01696f; }
-.ora-sep { color:#bbb; font-size:.75rem; }
-.ora-uscita { color:#888; }
+.ora-ingresso { font-weight:700; color:#01696f; font-size:.9rem; }
+.ora-sep { color:#ccc; font-size:.7rem; line-height:1; }
+.ora-uscita { color:#777; font-size:.82rem; }
+.ora-durata { font-size:.68rem; color:#aaa; margin-top:2px; letter-spacing:.01em; }
 .registro-body { flex:1; min-width:0; }
-.registro-header-row { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-bottom:.4rem; }
-.registro-attivita { font-size:.9rem; color:#333; margin:.3rem 0; line-height:1.45; }
-.registro-note { font-size:.82rem; color:#888; margin-top:.25rem; }
-.registro-firme { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.5rem; }
+.registro-header-row { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-bottom:.5rem; }
+.badge-classe { font-size:.82rem; padding: 3px 10px; }
+.btn-dettagli { padding:3px 12px; font-size:.78rem; }
+.registro-attivita { font-size:.88rem; color:#222; margin:.3rem 0; line-height:1.5; }
+.registro-note { font-size:.8rem; color:#999; margin-top:.2rem; font-style:italic; }
+.registro-firme { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.55rem; }
 .firma-chip {
     display:inline-flex; align-items:center; gap:.3rem;
-    font-size:.78rem; font-weight:500; padding:3px 10px; border-radius:20px;
+    font-size:.76rem; font-weight:500; padding:3px 10px; border-radius:20px;
 }
 .firma-docente  { background:#e8f4f4; color:#01696f; border:1px solid #b6d9d8; }
 .firma-tecnico  { background:#fff4e6; color:#c05500; border:1px solid #ffd4a3; }
 .firma-supplente{ background:#f0f0ff; color:#4f46e5; border:1px solid #c5c3ff; }
 .firma-altro    { background:#f5f5f5; color:#555;    border:1px solid #ddd; }
-.firma-vuota    { font-size:.8rem; color:#bbb; font-style:italic; }
+.firma-vuota    { font-size:.78rem; color:#ccc; }
 
 /* Storico rapido */
 .storico-mini { margin-top:1.25rem; padding-top:1rem; border-top:1px solid #eee; display:flex; align-items:center; flex-wrap:wrap; gap:.4rem; }
-.storico-mini-label { font-size:.78rem; color:#999; margin-right:.25rem; white-space:nowrap; }
+.storico-mini-label { font-size:.76rem; color:#aaa; margin-right:.25rem; white-space:nowrap; }
 .storico-chip {
-    font-size:.78rem; padding:3px 9px; border-radius:20px;
+    font-size:.76rem; padding:3px 9px; border-radius:20px;
     background:#f3f2ef; color:#555; border:1px solid #ddd;
     text-decoration:none; transition:background .15s, border-color .15s;
 }
 .storico-chip:hover { background:#e8f4f4; border-color:#01696f; color:#01696f; }
 .storico-chip-active { background:#01696f; color:#fff; border-color:#01696f; }
-
-/* Materiali grid */
-.materiali-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.75rem; }
-.materiale-card {
-    background:#f9f8f5; border:1.5px solid #e0ddd8; border-radius:10px;
-    padding:.75rem 1rem; display:flex; flex-direction:column; gap:.3rem;
-}
-.materiale-ok       { border-left:3px solid #22c55e; }
-.materiale-basso    { border-left:3px solid #f59e0b; }
-.materiale-esaurito { border-left:3px solid #ef4444; }
-.materiale-nome  { font-weight:600; font-size:.88rem; color:#1a1a1a; }
-.materiale-qty   { font-size:1.1rem; color:#333; }
-.materiale-unita { font-size:.78rem; color:#999; margin-left:2px; }
-.materiale-stato { margin-top:2px; }
-
-/* Card list per segnalazioni mobile */
-.dash-card-list { display:flex; flex-direction:column; gap:10px; }
-.dcl-item {
-    background:#f9f8f5; border:1px solid #e0ddd8; border-radius:10px;
-    padding:12px 14px; display:flex; flex-direction:column; gap:7px;
-}
-.dcl-main { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
-.dcl-title { font-weight:700; font-size:.88rem; color:#1a1a1a; flex:1; min-width:0; }
-.dcl-badges { display:flex; gap:5px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; }
-.dcl-meta { display:flex; justify-content:space-between; font-size:.78rem; color:#888; gap:8px; }
-.dcl-btn { align-self:flex-end; }
-
-/* Visibilità desktop/mobile tabella vs card list */
-.dash-table-mobile  { display: none; }
-.dash-table-desktop { display: block; }
 
 /* ---- MOBILE (< 768px) ---- */
 @media (max-width: 767px) {
@@ -504,33 +342,22 @@ if (isDocente()) {
         flex-direction: column;
         align-items: flex-start;
         padding: .85rem 1rem;
-        gap: .65rem;
+        gap: .5rem;
         border-radius: 12px;
         margin-bottom: 1rem;
     }
-    .registro-banner .btn { width: 100%; justify-content: center; }
-    .registro-lab-nome { font-size: .97rem; }
+    .registro-banner-left { gap: .65rem; }
+    .registro-lab-nome { font-size: .95rem; }
 
-    /* KPI: 3 colonne mini su mobile */
-    .dash-kpi {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
+    /* KPI inline orizzontali in fondo al banner */
+    .banner-kpi {
+        gap: 1rem;
+        width: 100%;
+        padding-top: .4rem;
+        border-top: 1px solid #eee;
     }
-    .dash-kpi .stat-card {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        padding: 10px 6px;
-        gap: 5px;
-        border-radius: 12px;
-    }
-    .dash-kpi .stat-icon {
-        width: 34px; height: 34px;
-        border-radius: 8px;
-    }
-    .dash-kpi .stat-icon svg { width: 16px; height: 16px; }
-    .dash-kpi .stat-value { font-size: 18px; line-height: 1; }
-    .dash-kpi .stat-label { font-size: 9.5px; line-height: 1.25; color: #666; }
+    .banner-kpi-val { font-size: 1.25rem; }
+    .banner-kpi-label { font-size: .66rem; }
 
     /* Card header sessioni: impila verticalmente */
     .dash-card-header {
@@ -559,25 +386,13 @@ if (isDocente()) {
     }
     .dash-btn-nuova { width: 100%; justify-content: center; }
 
-    /* Tabella segnalazioni: nascosta su mobile, mostra card list */
-    .dash-table-desktop { display: none; }
-    .dash-table-mobile  { display: flex; }
-
-    /* Materiali: 2 colonne su mobile piccolo */
-    .materiali-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: .6rem;
-    }
-    .materiale-card { padding: .65rem .8rem; }
-    .materiale-nome { font-size: .82rem; }
-    .materiale-qty  { font-size: .95rem; }
-
     /* Registro timeline ottimizzato */
-    .registro-entry { gap: .55rem; }
+    .registro-entry { gap: .55rem; padding: .75rem 0; }
     .registro-orario { min-width: 44px; font-size: .78rem; }
     .registro-divider { margin-left: 50px; }
     .registro-attivita { font-size: .83rem; }
     .firma-chip { font-size: .71rem; padding: 2px 7px; }
+    .btn-dettagli { font-size: .74rem; padding: 3px 9px; }
 
     /* Storico: scroll orizzontale */
     .storico-mini {
@@ -593,13 +408,9 @@ if (isDocente()) {
 
 /* ---- TABLET (768–1023px) ---- */
 @media (min-width: 768px) and (max-width: 1023px) {
-    .dash-kpi { grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .dash-card-header { flex-wrap: wrap; }
     .dash-header-actions { flex-wrap: wrap; }
-    .dash-table-desktop { display: block; }
-    .dash-table-mobile  { display: none; }
-    .materiali-grid { grid-template-columns: repeat(3, 1fr); }
-    .registro-banner .btn { width: auto; }
+    .registro-banner .banner-kpi { gap: 1.5rem; }
 }
 </style>
 
@@ -836,7 +647,7 @@ require_once __DIR__ . '/includes/header.php';
                     $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' };
                     $sc = match($sg['stato']) { 'aperta'=>'badge-danger','in_lavorazione'=>'badge-warning','risolta'=>'badge-success',default=>'badge-secondary' };
                     $prioLabel = match($sg['priorita']) { 'urgente'=>L('segn_prio_urgente'),'alta'=>L('segn_prio_alta'),'media'=>L('segn_prio_media'),default=>L('segn_prio_bassa') };
-                    $statoLabel = match($sg['stato']) { 'aperta'=>L('segn_stato_aperta'),'in_lavorazione'=>L('segn_stato_in_lavorazione'),'risolta'=>L('segn_stato_risolta'),default=>L('segn_stato_chiusa') }; ?>
+                    $statoLabel = match($sg['stato']) { 'aperta'=>L('segn_stato_aperta'),'in_lavorazione'=>L('segn_stato_in_lavorazione'),'risolta'=>L('segn_stato_chiusa') }; ?>
                 <div class="dcl-item">
                     <div class="dcl-main">
                         <span class="dcl-title"><?= htmlspecialchars($sg['titolo']) ?></span>
