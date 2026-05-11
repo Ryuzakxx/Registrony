@@ -1,235 +1,80 @@
 /**
- * REGISTRONY DEL LABORATORIONY
- * Unica fonte di verità per tutta la logica JS.
- * NON aggiungere altri listener su sidebar/overlay/menuToggle altrove.
+ * REGISTRONY DEL LABORATORIONY - JavaScript
  */
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
+    // Mobile sidebar toggle
+    const menuToggle = document.querySelector('.menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
 
-    /* ================================================================
-       SIDEBAR MOBILE/TABLET
-       ================================================================ */
-    var sidebar  = document.getElementById('sidebar');
-    var overlay  = document.getElementById('sidebarOverlay');
-    var toggle   = document.getElementById('menuToggle');
-    var moreBtn  = document.getElementById('mobileMoreBtn');
-
-    function openSidebar() {
-        if (!sidebar) return;
-        sidebar.classList.add('open');
-        if (overlay) overlay.classList.add('active');
-        if (toggle)  toggle.setAttribute('aria-expanded', 'true');
-        if (moreBtn) moreBtn.setAttribute('aria-expanded', 'true');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeSidebar() {
-        if (!sidebar) return;
-        sidebar.classList.remove('open');
-        if (overlay) overlay.classList.remove('active');
-        if (toggle)  toggle.setAttribute('aria-expanded', 'false');
-        if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
-        document.body.style.overflow = '';
-    }
-
-    function toggleSidebar() {
-        sidebar && sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
-    }
-
-    if (toggle)  toggle.addEventListener('click',   toggleSidebar);
-    if (moreBtn) moreBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        toggleSidebar();
-    });
-
-    /* Overlay chiude sidebar MA non se il click viene dalla sidebar stessa */
-    if (overlay) overlay.addEventListener('click', function (e) {
-        if (!sidebar || !sidebar.contains(e.target)) {
-            closeSidebar();
-        }
-    });
-
-    /* Chiudi sidebar con Escape */
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') { closeSidebar(); closeDropdown(); }
-    });
-
-    /* Chiudi automaticamente quando si naviga (click su un link sidebar) */
-    if (sidebar) {
-        sidebar.querySelectorAll('.sidebar-nav a').forEach(function (link) {
-            link.addEventListener('click', function () {
-                if (window.innerWidth < 1024) closeSidebar();
-            });
+    if (menuToggle) {
+        menuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
         });
     }
 
-    /* Chiudi su resize a desktop */
-    window.addEventListener('resize', function () {
-        if (window.innerWidth >= 1024) closeSidebar();
-    });
-
-    /* Swipe-to-close sidebar (touch) */
-    var swipeStartX = 0;
-    var swipeStartY = 0;
-    if (sidebar) {
-        sidebar.addEventListener('touchstart', function (e) {
-            swipeStartX = e.touches[0].clientX;
-            swipeStartY = e.touches[0].clientY;
-        }, { passive: true });
-        sidebar.addEventListener('touchend', function (e) {
-            var dx = e.changedTouches[0].clientX - swipeStartX;
-            var dy = Math.abs(e.changedTouches[0].clientY - swipeStartY);
-            /* Swipe sinistra > 60px, e orizzontale più che verticale */
-            if (dx < -60 && dy < 80) closeSidebar();
-        }, { passive: true });
-    }
-
-    /* ================================================================
-       DROPDOWN PROFILO UTENTE
-       ================================================================ */
-    var userArea     = document.getElementById('sidebarUserArea');
-    var userTrigger  = document.getElementById('userDropdownTrigger');
-    var userDropdown = document.getElementById('userDropdown');
-    var userChevron  = document.getElementById('userChevron');
-    var dropOpen     = false;
-
-    function openDropdown() {
-        if (!userDropdown) return;
-        dropOpen = true;
-        userDropdown.classList.add('open');
-        if (userTrigger) userTrigger.setAttribute('aria-expanded', 'true');
-        if (userChevron) userChevron.style.transform = 'rotate(180deg)';
-    }
-
-    function closeDropdown() {
-        if (!userDropdown) return;
-        dropOpen = false;
-        userDropdown.classList.remove('open');
-        if (userTrigger) userTrigger.setAttribute('aria-expanded', 'false');
-        if (userChevron) userChevron.style.transform = 'rotate(0deg)';
-    }
-
-    /* Blocca la propagazione sull'intera area utente così l'overlay
-       non intercetta i click sul trigger o sulle voci del dropdown */
-    if (userArea) {
-        userArea.addEventListener('click', function (e) {
-            e.stopPropagation();
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
         });
     }
 
-    if (userTrigger) {
-        userTrigger.addEventListener('click', function (e) {
-            e.stopPropagation();
-            dropOpen ? closeDropdown() : openDropdown();
-        });
-    }
-
-    /* Click fuori dal dropdown lo chiude */
-    document.addEventListener('click', function (e) {
-        if (!dropOpen || !userDropdown) return;
-        if (userArea && userArea.contains(e.target)) return;
-        closeDropdown();
-    });
-
-    /* ================================================================
-       AUTO-DISMISS ALERTS
-       ================================================================ */
-    document.querySelectorAll('.alert[data-auto-dismiss]').forEach(function (alert) {
-        setTimeout(function () {
+    // Auto-dismiss alerts after 5 seconds
+    document.querySelectorAll('.alert[data-auto-dismiss]').forEach(function(alert) {
+        setTimeout(function() {
+            alert.style.opacity = '0';
             alert.style.transition = 'opacity 0.3s';
-            alert.style.opacity   = '0';
-            setTimeout(function () { alert.remove(); }, 320);
+            setTimeout(function() { alert.remove(); }, 300);
         }, 5000);
     });
 
-    /* ================================================================
-       CONFIRM DELETE
-       ================================================================ */
-    document.querySelectorAll('[data-confirm]').forEach(function (el) {
-        el.addEventListener('click', function (e) {
-            if (!confirm(this.getAttribute('data-confirm'))) e.preventDefault();
+    // Confirm delete actions
+    document.querySelectorAll('[data-confirm]').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            if (!confirm(this.getAttribute('data-confirm'))) {
+                e.preventDefault();
+            }
         });
     });
 
-    /* ================================================================
-       MODAL — apertura/chiusura
-       ================================================================ */
-    document.querySelectorAll('[data-modal]').forEach(function (trigger) {
-        trigger.addEventListener('click', function (e) {
+    // Modal handling
+    document.querySelectorAll('[data-modal]').forEach(function(trigger) {
+        trigger.addEventListener('click', function(e) {
             e.preventDefault();
-            var modal = document.getElementById(this.getAttribute('data-modal'));
-            if (modal) {
-                modal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
+            var modalId = this.getAttribute('data-modal');
+            var modal = document.getElementById(modalId);
+            if (modal) modal.classList.add('active');
         });
     });
 
-    function closeModal(idOrEl) {
-        var mo = typeof idOrEl === 'string'
-            ? document.getElementById(idOrEl)
-            : idOrEl;
-        if (!mo) return;
-        mo.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-
-    document.querySelectorAll('.modal-close, .modal-cancel').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var mo = this.closest('.modal-overlay');
-            if (mo) closeModal(mo);
+    document.querySelectorAll('.modal-close, .modal-cancel').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            this.closest('.modal-overlay').classList.remove('active');
         });
     });
 
-    document.querySelectorAll('.modal-overlay').forEach(function (mo) {
-        mo.addEventListener('click', function (e) {
-            if (e.target === this) closeModal(this);
+    document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === this) this.classList.remove('active');
         });
     });
-
-    /* ================================================================
-       MODAL: bottom-sheet swipe-to-close su mobile/tablet
-       ================================================================ */
-    document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
-        var modal = overlay.querySelector('.modal');
-        if (!modal) return;
-        var startY = 0;
-        modal.addEventListener('touchstart', function (e) {
-            startY = e.touches[0].clientY;
-        }, { passive: true });
-        modal.addEventListener('touchend', function (e) {
-            var dy = e.changedTouches[0].clientY - startY;
-            if (dy > 80 && modal.scrollTop === 0) closeModal(overlay);
-        }, { passive: true });
-    });
-
-    /* ================================================================
-       BOTTOM NAV: evidenzia la voce attiva correttamente
-       ================================================================ */
-    var currentPath = window.location.pathname;
-    document.querySelectorAll('.mobile-bottom-nav a').forEach(function (link) {
-        if (link.id === 'mobileMoreBtn') return;
-        var href = link.getAttribute('href');
-        if (!href || href === '#') return;
-        try {
-            var linkPath = new URL(href, window.location.origin).pathname;
-            if (currentPath === linkPath ||
-                (linkPath !== '/' && currentPath.startsWith(linkPath.replace(/\/[^/]+\.php$/, '')))) {
-                link.classList.add('active');
-            }
-        } catch (err) { /* ignora URL non parsabili */ }
-    });
-
 });
 
-/* ================================================================
-   FUNZIONI GLOBALI per modali usate inline (onclick=...)
-   ================================================================ */
-function openModal(id)  {
-    var m = document.getElementById(id);
-    if (m) { m.classList.add('active'); document.body.style.overflow = 'hidden'; }
+/**
+ * Apri modale
+ */
+function openModal(id) {
+    var modal = document.getElementById(id);
+    if (modal) modal.classList.add('active');
 }
+
+/**
+ * Chiudi modale
+ */
 function closeModal(id) {
-    var m = document.getElementById(id);
-    if (m) { m.classList.remove('active'); document.body.style.overflow = ''; }
+    var modal = document.getElementById(id);
+    if (modal) modal.classList.remove('active');
 }
