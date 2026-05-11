@@ -17,7 +17,6 @@ $userId = (int)getCurrentUserId();
 if (isDocente()) {
     $labId = (int)getSelectedLabId();
 
-    /* Dettagli laboratorio + flag responsabile */
     $resLab = mysqli_query($conn,
         "SELECT *, (id_responsabile = $userId) AS is_responsabile
          FROM laboratori WHERE id = $labId LIMIT 1");
@@ -26,17 +25,14 @@ if (isDocente()) {
 
     $isResponsabile = (bool)$lab['is_responsabile'];
 
-    /* Data da visualizzare (oggi o filtro storico) */
     $viewDate = $_GET['data'] ?? $today;
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $viewDate)) $viewDate = $today;
     $isToday = ($viewDate === $today);
 
-    /* KPI per questo laboratorio */
     $totS   = (int)mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM sessioni_laboratorio WHERE id_laboratorio = $labId AND data = '$today'"))[0];
     $totSgn = (int)mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM segnalazioni WHERE id_laboratorio = $labId AND stato IN ('aperta','in_lavorazione')"))[0];
     $totMat = (int)mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM materiali WHERE id_laboratorio = $labId AND attivo = 1 AND quantita_disponibile IS NOT NULL AND soglia_minima IS NOT NULL AND quantita_disponibile <= soglia_minima"))[0];
 
-    /* Sessioni per la data selezionata con firme */
     $res = mysqli_query($conn, "
         SELECT s.id, s.data, s.ora_ingresso, s.ora_uscita, s.attivita_svolta, s.note,
                c.nome AS classe,
@@ -64,7 +60,6 @@ if (isDocente()) {
         $sessions[] = $row;
     }
 
-    /* Segnalazioni aperte per questo laboratorio */
     $resSgns = mysqli_query($conn, "
         SELECT sg.id, sg.titolo, sg.priorita, sg.stato, sg.data_segnalazione,
                CONCAT(u.cognome, ' ', u.nome) AS segnalato_da
@@ -77,7 +72,6 @@ if (isDocente()) {
     $segnalazioni = [];
     while ($r = mysqli_fetch_assoc($resSgns)) $segnalazioni[] = $r;
 
-    /* Materiali del laboratorio */
     $resMat2 = mysqli_query($conn, "
         SELECT nome, unita_misura, quantita_disponibile, soglia_minima
         FROM materiali
@@ -87,7 +81,6 @@ if (isDocente()) {
     $materiali = [];
     while ($r = mysqli_fetch_assoc($resMat2)) $materiali[] = $r;
 
-    /* Ultime 30 date con sessioni (per calendario mini) */
     $resDates = mysqli_query($conn, "
         SELECT DISTINCT data FROM sessioni_laboratorio
         WHERE id_laboratorio = $labId AND data <= '$today'
@@ -123,7 +116,7 @@ if (isDocente()) {
 </div>
 
 <!-- ===================== KPI CARDS ===================== -->
-<div class="stats-grid" style="margin-bottom:1.5rem">
+<div class="stats-grid dash-kpi">
     <div class="stat-card">
         <div class="stat-icon green">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -155,23 +148,24 @@ if (isDocente()) {
 
 <!-- ===================== SESSIONI (REGISTRO GIORNALIERO) ===================== -->
 <div class="card">
-    <div class="card-header">
+    <div class="card-header dash-card-header">
         <h3>
             <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             <?= $isToday ? L('dash_sessioni_oggi_titolo') : L('sess_titolo_dettaglio') . ' ' . date('d/m/Y', strtotime($viewDate)) ?>
         </h3>
-        <div class="d-flex gap-2 align-center flex-wrap">
-            <!-- Navigazione storico -->
-            <form method="GET" class="d-flex gap-1 align-center">
-                <label for="data" style="font-size:.82rem;color:#666;white-space:nowrap">&#128197; <?= L('data') ?>:</label>
+        <div class="dash-header-actions">
+            <form method="GET" class="dash-date-form">
                 <input type="date" id="data" name="data" value="<?= htmlspecialchars($viewDate) ?>"
-                    max="<?= $today ?>" class="form-control" style="width:145px;padding:4px 8px;font-size:.85rem">
+                    max="<?= $today ?>" class="form-control dash-date-input" aria-label="<?= L('data') ?>">
                 <button type="submit" class="btn btn-secondary btn-sm"><?= L('filtra') ?></button>
                 <?php if (!$isToday): ?>
-                    <a href="<?= BASE_PATH ?>/index.php" class="btn btn-primary btn-sm"><?= L('dash_sessioni_oggi') ?></a>
+                    <a href="<?= BASE_PATH ?>/index.php" class="btn btn-secondary btn-sm"><?= L('dash_sessioni_oggi') ?></a>
                 <?php endif; ?>
             </form>
-            <a href="<?= BASE_PATH ?>/pages/sessioni/nuova.php" class="btn btn-primary btn-sm"><?= L('sess_btn_nuova') ?></a>
+            <a href="<?= BASE_PATH ?>/pages/sessioni/nuova.php" class="btn btn-primary btn-sm dash-btn-nuova">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <?= L('sess_btn_nuova') ?>
+            </a>
         </div>
     </div>
     <div class="card-body">
@@ -184,7 +178,6 @@ if (isDocente()) {
                 <p><?= $isToday ? L('sess_nessuna_oggi') : L('sess_nessuna') ?></p>
             </div>
         <?php else: ?>
-            <!-- Timeline registro -->
             <div class="registro-timeline">
                 <?php foreach ($sessions as $idx => $s): ?>
                 <div class="registro-entry">
@@ -208,7 +201,6 @@ if (isDocente()) {
                         <?php if (!empty($s['note'])): ?>
                             <div class="registro-note"><em><?= L('note') ?>: <?= htmlspecialchars($s['note']) ?></em></div>
                         <?php endif; ?>
-                        <!-- Firme -->
                         <div class="registro-firme">
                             <?php if (empty($s['firme'])): ?>
                                 <span class="firma-vuota">&#9995; <?= L('firme_nessuna') ?></span>
@@ -243,7 +235,6 @@ if (isDocente()) {
             </div>
         <?php endif; ?>
 
-        <!-- Mini-storico: ultime date con sessioni -->
         <?php if (!empty($pastDates)): ?>
             <div class="storico-mini">
                 <span class="storico-mini-label">&#128337; <?= L('sess_titolo_lista') ?>:</span>
@@ -280,7 +271,8 @@ if (isDocente()) {
                 <h4><?= L('dash_tutto_ok') ?></h4>
             </div>
         <?php else: ?>
-            <div class="table-responsive">
+            <!-- DESKTOP: tabella normale -->
+            <div class="table-responsive dash-table-desktop">
                 <table class="table">
                     <thead><tr>
                         <th><?= L('segn_titolo_campo') ?></th>
@@ -309,6 +301,29 @@ if (isDocente()) {
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
+            <!-- MOBILE: card list -->
+            <div class="dash-card-list dash-table-mobile">
+                <?php foreach ($segnalazioni as $sg):
+                    $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' };
+                    $sc = $sg['stato'] === 'aperta' ? 'badge-danger' : 'badge-warning';
+                    $prioLabel = match($sg['priorita']) { 'urgente'=>L('segn_prio_urgente'),'alta'=>L('segn_prio_alta'),'media'=>L('segn_prio_media'),default=>L('segn_prio_bassa') };
+                    $statoLabel = match($sg['stato']) { 'aperta'=>L('segn_stato_aperta'),'in_lavorazione'=>L('segn_stato_in_lavorazione'),'risolta'=>L('segn_stato_risolta'),default=>L('segn_stato_chiusa') }; ?>
+                <div class="dcl-item">
+                    <div class="dcl-main">
+                        <span class="dcl-title"><?= htmlspecialchars($sg['titolo']) ?></span>
+                        <div class="dcl-badges">
+                            <span class="badge <?= $bc ?>"><?= $prioLabel ?></span>
+                            <span class="badge <?= $sc ?>"><?= $statoLabel ?></span>
+                        </div>
+                    </div>
+                    <div class="dcl-meta">
+                        <span><?= htmlspecialchars($sg['segnalato_da']) ?></span>
+                        <span><?= date('d/m/Y', strtotime($sg['data_segnalazione'])) ?></span>
+                    </div>
+                    <a href="<?= BASE_PATH ?>/pages/segnalazioni/dettaglio.php?id=<?= $sg['id'] ?>" class="btn btn-primary btn-sm dcl-btn"><?= L('dettagli') ?></a>
+                </div>
+                <?php endforeach; ?>
             </div>
         <?php endif; ?>
     </div>
@@ -370,20 +385,51 @@ if (isDocente()) {
 </div>
 
 <style>
-/* ---- Registro banner ---- */
+/* ======================================================
+   DASHBOARD — stili specifici (registro docente)
+   ====================================================== */
+
+/* Banner laboratorio */
 .registro-banner {
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem;
-    background:#fff; border:1.5px solid #d4d0ca; border-radius:10px;
+    background:#fff; border:1.5px solid #d4d0ca; border-radius:12px;
     padding:1rem 1.25rem; margin-bottom:1.25rem;
     box-shadow:0 2px 8px rgba(0,0,0,.06);
 }
-.registro-banner-left { display:flex; align-items:center; gap:.85rem; }
+.registro-banner-left { display:flex; align-items:center; gap:.85rem; min-width:0; }
 .registro-lab-icon { color:#01696f; flex-shrink:0; }
-.registro-lab-nome { font-size:1.15rem; font-weight:700; color:#1a1a1a; }
+.registro-lab-nome { font-size:1.1rem; font-weight:700; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .registro-lab-meta { font-size:.82rem; color:#777; margin-top:2px; }
 .badge-resp { background:#01696f; color:#fff; border-radius:20px; padding:1px 8px; font-size:.75rem; font-weight:600; }
 
-/* ---- Timeline sessioni ---- */
+/* KPI: 3 colonne su desktop, 3 mini su mobile */
+.dash-kpi { margin-bottom:1.25rem; }
+
+/* Card header con filtro data */
+.dash-card-header { flex-wrap: wrap; gap: 10px; }
+.dash-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-end;
+}
+.dash-date-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+.dash-date-input {
+    width: 138px;
+    padding: 5px 8px;
+    font-size: .84rem;
+}
+.dash-btn-nuova { white-space: nowrap; }
+
+/* Timeline sessioni */
 .registro-timeline { display:flex; flex-direction:column; gap:0; }
 .registro-entry { display:flex; gap:1.1rem; padding:.9rem 0; }
 .registro-divider { height:1px; background:#e8e6e0; margin:0 0 0 68px; }
@@ -409,7 +455,7 @@ if (isDocente()) {
 .firma-altro    { background:#f5f5f5; color:#555;    border:1px solid #ddd; }
 .firma-vuota    { font-size:.8rem; color:#bbb; font-style:italic; }
 
-/* ---- Storico rapido ---- */
+/* Storico rapido */
 .storico-mini { margin-top:1.25rem; padding-top:1rem; border-top:1px solid #eee; display:flex; align-items:center; flex-wrap:wrap; gap:.4rem; }
 .storico-mini-label { font-size:.78rem; color:#999; margin-right:.25rem; white-space:nowrap; }
 .storico-chip {
@@ -420,24 +466,146 @@ if (isDocente()) {
 .storico-chip:hover { background:#e8f4f4; border-color:#01696f; color:#01696f; }
 .storico-chip-active { background:#01696f; color:#fff; border-color:#01696f; }
 
-/* ---- Materiali grid ---- */
+/* Materiali grid */
 .materiali-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.75rem; }
 .materiale-card {
-    background:#f9f8f5; border:1.5px solid #e0ddd8; border-radius:8px;
+    background:#f9f8f5; border:1.5px solid #e0ddd8; border-radius:10px;
     padding:.75rem 1rem; display:flex; flex-direction:column; gap:.3rem;
 }
-.materiale-ok      { border-left:3px solid #22c55e; }
-.materiale-basso   { border-left:3px solid #f59e0b; }
-.materiale-esaurito{ border-left:3px solid #ef4444; }
-.materiale-nome { font-weight:600; font-size:.88rem; color:#1a1a1a; }
-.materiale-qty  { font-size:1.1rem; color:#333; }
-.materiale-unita{ font-size:.78rem; color:#999; margin-left:2px; }
-.materiale-stato{ margin-top:2px; }
+.materiale-ok       { border-left:3px solid #22c55e; }
+.materiale-basso    { border-left:3px solid #f59e0b; }
+.materiale-esaurito { border-left:3px solid #ef4444; }
+.materiale-nome  { font-weight:600; font-size:.88rem; color:#1a1a1a; }
+.materiale-qty   { font-size:1.1rem; color:#333; }
+.materiale-unita { font-size:.78rem; color:#999; margin-left:2px; }
+.materiale-stato { margin-top:2px; }
+
+/* Card list per segnalazioni mobile */
+.dash-card-list { display:flex; flex-direction:column; gap:10px; }
+.dcl-item {
+    background:#f9f8f5; border:1px solid #e0ddd8; border-radius:10px;
+    padding:12px 14px; display:flex; flex-direction:column; gap:7px;
+}
+.dcl-main { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.dcl-title { font-weight:700; font-size:.88rem; color:#1a1a1a; flex:1; min-width:0; }
+.dcl-badges { display:flex; gap:5px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; }
+.dcl-meta { display:flex; justify-content:space-between; font-size:.78rem; color:#888; gap:8px; }
+.dcl-btn { align-self:flex-end; }
+
+/* Visibilità desktop/mobile tabella vs card list */
+.dash-table-mobile  { display: none; }
+.dash-table-desktop { display: block; }
+
+/* ---- MOBILE (< 768px) ---- */
+@media (max-width: 767px) {
+
+    /* Banner: verticale compatto */
+    .registro-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: .85rem 1rem;
+        gap: .65rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+    .registro-banner .btn { width: 100%; justify-content: center; }
+    .registro-lab-nome { font-size: .97rem; }
+
+    /* KPI: 3 colonne mini su mobile */
+    .dash-kpi {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .dash-kpi .stat-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 10px 6px;
+        gap: 5px;
+        border-radius: 12px;
+    }
+    .dash-kpi .stat-icon {
+        width: 34px; height: 34px;
+        border-radius: 8px;
+    }
+    .dash-kpi .stat-icon svg { width: 16px; height: 16px; }
+    .dash-kpi .stat-value { font-size: 18px; line-height: 1; }
+    .dash-kpi .stat-label { font-size: 9.5px; line-height: 1.25; color: #666; }
+
+    /* Card header sessioni: impila verticalmente */
+    .dash-card-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px 14px;
+    }
+    .dash-card-header h3 { font-size: 13.5px; }
+    .dash-header-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 7px;
+        justify-content: flex-start;
+    }
+    .dash-date-form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px;
+        width: 100%;
+    }
+    .dash-date-form a.btn { grid-column: 1 / -1; justify-content: center; }
+    .dash-date-input {
+        width: 100%;
+        font-size: 16px; /* previene zoom iOS */
+    }
+    .dash-btn-nuova { width: 100%; justify-content: center; }
+
+    /* Tabella segnalazioni: nascosta su mobile, mostra card list */
+    .dash-table-desktop { display: none; }
+    .dash-table-mobile  { display: flex; }
+
+    /* Materiali: 2 colonne su mobile piccolo */
+    .materiali-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: .6rem;
+    }
+    .materiale-card { padding: .65rem .8rem; }
+    .materiale-nome { font-size: .82rem; }
+    .materiale-qty  { font-size: .95rem; }
+
+    /* Registro timeline ottimizzato */
+    .registro-entry { gap: .55rem; }
+    .registro-orario { min-width: 44px; font-size: .78rem; }
+    .registro-divider { margin-left: 50px; }
+    .registro-attivita { font-size: .83rem; }
+    .firma-chip { font-size: .71rem; padding: 2px 7px; }
+
+    /* Storico: scroll orizzontale */
+    .storico-mini {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+        gap: .3rem;
+    }
+    .storico-chip { flex-shrink: 0; font-size: .74rem; }
+    .storico-mini-label { flex-shrink: 0; }
+}
+
+/* ---- TABLET (768–1023px) ---- */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .dash-kpi { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .dash-card-header { flex-wrap: wrap; }
+    .dash-header-actions { flex-wrap: wrap; }
+    .dash-table-desktop { display: block; }
+    .dash-table-mobile  { display: none; }
+    .materiali-grid { grid-template-columns: repeat(3, 1fr); }
+    .registro-banner .btn { width: auto; }
+}
 </style>
 
 <?php
     require_once __DIR__ . '/includes/footer.php';
-    exit; /* Fine vista docente */
+    exit;
 }
 
 /* ================================================================
@@ -445,7 +613,6 @@ if (isDocente()) {
    ================================================================ */
 $pageTitle = L('dash_titolo');
 
-/* Filtra per lab del tecnico se non è admin */
 $labFilter = '';
 if (isTecnico()) {
     $techLabs = getTechnicianLabs($userId);
@@ -462,7 +629,6 @@ if (isTecnico()) {
     $labFilter = $labFilterMat = $labFilterSgn = $labFilterLab = '';
 }
 
-/* KPI */
 $resT = mysqli_query($conn, "SELECT COUNT(*) FROM laboratori WHERE attivo = 1 $labFilterLab");
 $totLabs = mysqli_fetch_row($resT)[0];
 
@@ -475,7 +641,6 @@ $totSegnAperte = mysqli_fetch_row($resT)[0];
 $resT = mysqli_query($conn, "SELECT COUNT(*) FROM materiali WHERE attivo = 1 AND quantita_disponibile IS NOT NULL AND soglia_minima IS NOT NULL AND quantita_disponibile <= soglia_minima $labFilterMat");
 $totMatEsaurimento = mysqli_fetch_row($resT)[0];
 
-/* Sessioni oggi */
 $result = mysqli_query($conn, "
     SELECT s.id, s.data, s.ora_ingresso, s.ora_uscita, s.attivita_svolta,
            l.nome AS laboratorio, l.aula, c.nome AS classe,
@@ -492,7 +657,6 @@ $result = mysqli_query($conn, "
 $sessioniOggi = [];
 while ($row = mysqli_fetch_assoc($result)) $sessioniOggi[] = $row;
 
-/* Segnalazioni aperte */
 $result = mysqli_query($conn, "
     SELECT sg.id, sg.titolo, sg.priorita, sg.stato, sg.data_segnalazione,
            l.nome AS laboratorio, CONCAT(u.cognome, ' ', u.nome) AS segnalato_da
@@ -509,7 +673,7 @@ while ($row = mysqli_fetch_assoc($result)) $segnalazioni[] = $row;
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div class="stats-grid">
+<div class="stats-grid dash-kpi" style="margin-bottom:1.25rem">
     <div class="stat-card">
         <div class="stat-icon blue">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
@@ -566,7 +730,8 @@ require_once __DIR__ . '/includes/header.php';
                 <p><?= L('sess_nessuna_oggi') ?></p>
             </div>
         <?php else: ?>
-            <div class="table-responsive">
+            <!-- DESKTOP: tabella -->
+            <div class="table-responsive dash-table-desktop">
                 <table class="table">
                     <thead><tr>
                         <th><?= L('sess_laboratorio') ?></th>
@@ -592,6 +757,24 @@ require_once __DIR__ . '/includes/header.php';
                     </tbody>
                 </table>
             </div>
+            <!-- MOBILE: card list -->
+            <div class="dash-card-list dash-table-mobile">
+                <?php foreach ($sessioniOggi as $s): ?>
+                <div class="dcl-item">
+                    <div class="dcl-main">
+                        <span class="dcl-title"><?= htmlspecialchars($s['laboratorio']) ?> — <?= htmlspecialchars($s['aula']) ?></span>
+                        <span class="badge badge-primary"><?= htmlspecialchars($s['classe']) ?></span>
+                    </div>
+                    <div class="dcl-meta">
+                        <span><?= htmlspecialchars(substr($s['ora_ingresso'],0,5)) ?><?= $s['ora_uscita'] ? ' → '.htmlspecialchars(substr($s['ora_uscita'],0,5)) : ' <span class="badge badge-success">'.L('sess_in_corso').'</span>' ?></span>
+                        <span><?= htmlspecialchars($s['docenti'] ?? '—') ?></span>
+                    </div>
+                    <?php if (!empty($s['attivita_svolta'])): ?>
+                    <div style="font-size:.8rem;color:#555;line-height:1.4"><?= htmlspecialchars(mb_strimwidth($s['attivita_svolta'], 0, 80, '...')) ?></div>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
     </div>
 </div>
@@ -614,7 +797,8 @@ require_once __DIR__ . '/includes/header.php';
                 <p><?= L('dash_nessuna_segn') ?></p>
             </div>
         <?php else: ?>
-            <div class="table-responsive">
+            <!-- DESKTOP: tabella -->
+            <div class="table-responsive dash-table-desktop">
                 <table class="table">
                     <thead><tr>
                         <th><?= L('segn_titolo_campo') ?></th>
@@ -646,8 +830,72 @@ require_once __DIR__ . '/includes/header.php';
                     </tbody>
                 </table>
             </div>
+            <!-- MOBILE: card list -->
+            <div class="dash-card-list dash-table-mobile">
+                <?php foreach ($segnalazioni as $sg):
+                    $bc = match($sg['priorita']) { 'urgente'=>'badge-danger','alta'=>'badge-warning','media'=>'badge-info',default=>'badge-secondary' };
+                    $sc = match($sg['stato']) { 'aperta'=>'badge-danger','in_lavorazione'=>'badge-warning','risolta'=>'badge-success',default=>'badge-secondary' };
+                    $prioLabel = match($sg['priorita']) { 'urgente'=>L('segn_prio_urgente'),'alta'=>L('segn_prio_alta'),'media'=>L('segn_prio_media'),default=>L('segn_prio_bassa') };
+                    $statoLabel = match($sg['stato']) { 'aperta'=>L('segn_stato_aperta'),'in_lavorazione'=>L('segn_stato_in_lavorazione'),'risolta'=>L('segn_stato_risolta'),default=>L('segn_stato_chiusa') }; ?>
+                <div class="dcl-item">
+                    <div class="dcl-main">
+                        <span class="dcl-title"><?= htmlspecialchars($sg['titolo']) ?></span>
+                        <div class="dcl-badges">
+                            <span class="badge <?= $bc ?>"><?= $prioLabel ?></span>
+                            <span class="badge <?= $sc ?>"><?= $statoLabel ?></span>
+                        </div>
+                    </div>
+                    <div class="dcl-meta">
+                        <span><?= htmlspecialchars($sg['segnalato_da']) ?> &bull; <?= htmlspecialchars($sg['laboratorio']) ?></span>
+                        <span><?= date('d/m/Y', strtotime($sg['data_segnalazione'])) ?></span>
+                    </div>
+                    <a href="<?= BASE_PATH ?>/pages/segnalazioni/dettaglio.php?id=<?= $sg['id'] ?>" class="btn btn-primary btn-sm dcl-btn"><?= L('dettagli') ?></a>
+                </div>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
     </div>
 </div>
+
+<style>
+/* Vista Admin/Tecnico — stili specifici */
+.dash-kpi { margin-bottom: 1.25rem; }
+.dash-card-list { display:flex; flex-direction:column; gap:10px; }
+.dcl-item {
+    background:#f9f8f5; border:1px solid #e0ddd8; border-radius:10px;
+    padding:12px 14px; display:flex; flex-direction:column; gap:7px;
+}
+.dcl-main { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.dcl-title { font-weight:700; font-size:.88rem; color:#1a1a1a; flex:1; min-width:0; }
+.dcl-badges { display:flex; gap:5px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; }
+.dcl-meta { display:flex; justify-content:space-between; font-size:.78rem; color:#888; gap:8px; flex-wrap:wrap; }
+.dcl-btn { align-self:flex-end; }
+.dash-table-mobile  { display: none; }
+.dash-table-desktop { display: block; }
+
+@media (max-width: 767px) {
+    .dash-kpi {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 9px;
+    }
+    .dash-kpi .stat-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 12px 8px;
+        gap: 6px;
+        border-radius: 12px;
+    }
+    .dash-kpi .stat-icon { width: 36px; height: 36px; border-radius: 8px; }
+    .dash-kpi .stat-icon svg { width: 17px; height: 17px; }
+    .dash-kpi .stat-value { font-size: 20px; line-height: 1; }
+    .dash-kpi .stat-label { font-size: 10px; line-height: 1.3; color: #666; }
+    .dash-table-desktop { display: none; }
+    .dash-table-mobile  { display: flex; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+    .dash-kpi { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+}
+</style>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
