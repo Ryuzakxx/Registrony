@@ -7,7 +7,7 @@
 document.addEventListener('DOMContentLoaded', function () {
 
     /* ================================================================
-       SIDEBAR MOBILE
+       SIDEBAR MOBILE/TABLET
        ================================================================ */
     var sidebar  = document.getElementById('sidebar');
     var overlay  = document.getElementById('sidebarOverlay');
@@ -37,19 +37,46 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (toggle)  toggle.addEventListener('click',   toggleSidebar);
-    if (moreBtn) moreBtn.addEventListener('click', function (e) { e.preventDefault(); toggleSidebar(); });
+    if (moreBtn) moreBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        toggleSidebar();
+    });
     if (overlay) overlay.addEventListener('click',  closeSidebar);
 
+    /* Chiudi sidebar con Escape o swipe su link nav */
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-            closeSidebar();
-            closeDropdown();
-        }
+        if (e.key === 'Escape') { closeSidebar(); closeDropdown(); }
     });
 
+    /* Chiudi automaticamente quando si naviga (click su un link sidebar) */
+    if (sidebar) {
+        sidebar.querySelectorAll('.sidebar-nav a').forEach(function (link) {
+            link.addEventListener('click', function () {
+                if (window.innerWidth < 1024) closeSidebar();
+            });
+        });
+    }
+
+    /* Chiudi su resize a desktop */
     window.addEventListener('resize', function () {
         if (window.innerWidth >= 1024) closeSidebar();
     });
+
+    /* Swipe-to-close sidebar (touch) */
+    var swipeStartX = 0;
+    var swipeStartY = 0;
+    if (sidebar) {
+        sidebar.addEventListener('touchstart', function (e) {
+            swipeStartX = e.touches[0].clientX;
+            swipeStartY = e.touches[0].clientY;
+        }, { passive: true });
+        sidebar.addEventListener('touchend', function (e) {
+            var dx = e.changedTouches[0].clientX - swipeStartX;
+            var dy = Math.abs(e.changedTouches[0].clientY - swipeStartY);
+            /* Swipe sinistra > 60px, e orizzontale più che verticale */
+            if (dx < -60 && dy < 80) closeSidebar();
+        }, { passive: true });
+    }
 
     /* ================================================================
        DROPDOWN PROFILO UTENTE
@@ -83,7 +110,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.addEventListener('click', function (e) {
-        if (dropOpen && userDropdown && !userDropdown.contains(e.target) && e.target !== userTrigger) {
+        if (dropOpen && userDropdown &&
+            !userDropdown.contains(e.target) &&
+            e.target !== userTrigger) {
             closeDropdown();
         }
     });
@@ -109,31 +138,85 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     /* ================================================================
-       MODAL
+       MODAL — apertura/chiusura
        ================================================================ */
     document.querySelectorAll('[data-modal]').forEach(function (trigger) {
         trigger.addEventListener('click', function (e) {
             e.preventDefault();
             var modal = document.getElementById(this.getAttribute('data-modal'));
-            if (modal) modal.classList.add('active');
+            if (modal) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
         });
     });
+
+    function closeModal(idOrEl) {
+        var mo = typeof idOrEl === 'string'
+            ? document.getElementById(idOrEl)
+            : idOrEl;
+        if (!mo) return;
+        mo.classList.remove('active');
+        document.body.style.overflow = '';
+    }
 
     document.querySelectorAll('.modal-close, .modal-cancel').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var mo = this.closest('.modal-overlay');
-            if (mo) mo.classList.remove('active');
+            if (mo) closeModal(mo);
         });
     });
 
     document.querySelectorAll('.modal-overlay').forEach(function (mo) {
         mo.addEventListener('click', function (e) {
-            if (e.target === this) this.classList.remove('active');
+            if (e.target === this) closeModal(this);
         });
+    });
+
+    /* ================================================================
+       MODAL: bottom-sheet swipe-to-close su mobile/tablet
+       ================================================================ */
+    document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
+        var modal = overlay.querySelector('.modal');
+        if (!modal) return;
+        var startY = 0;
+        modal.addEventListener('touchstart', function (e) {
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+        modal.addEventListener('touchend', function (e) {
+            var dy = e.changedTouches[0].clientY - startY;
+            if (dy > 80 && modal.scrollTop === 0) closeModal(overlay);
+        }, { passive: true });
+    });
+
+    /* ================================================================
+       BOTTOM NAV: evidenzia la voce attiva correttamente
+       ================================================================ */
+    var currentPath = window.location.pathname;
+    document.querySelectorAll('.mobile-bottom-nav a').forEach(function (link) {
+        if (link.id === 'mobileMoreBtn') return; /* skip il toggle menu */
+        var href = link.getAttribute('href');
+        if (!href || href === '#') return;
+        /* Confronta il path normalizzato */
+        try {
+            var linkPath = new URL(href, window.location.origin).pathname;
+            if (currentPath === linkPath ||
+                (linkPath !== '/' && currentPath.startsWith(linkPath.replace(/\/[^/]+\.php$/, '')))) {
+                link.classList.add('active');
+            }
+        } catch (err) { /* ignora URL non parsabili */ }
     });
 
 });
 
-/* Funzioni globali per modali usate inline */
-function openModal(id)  { var m = document.getElementById(id); if (m) m.classList.add('active'); }
-function closeModal(id) { var m = document.getElementById(id); if (m) m.classList.remove('active'); }
+/* ================================================================
+   FUNZIONI GLOBALI per modali usate inline (onclick=...)
+   ================================================================ */
+function openModal(id)  {
+    var m = document.getElementById(id);
+    if (m) { m.classList.add('active'); document.body.style.overflow = 'hidden'; }
+}
+function closeModal(id) {
+    var m = document.getElementById(id);
+    if (m) { m.classList.remove('active'); document.body.style.overflow = ''; }
+}
