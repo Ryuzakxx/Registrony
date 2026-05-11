@@ -247,6 +247,7 @@ CREATE TABLE `sessioni_materiali` (
 
 --
 -- Struttura della tabella `utenti`
+-- NOTA: la colonna `avatar` è stata aggiunta per supportare le foto profilo
 --
 
 CREATE TABLE `utenti` (
@@ -257,6 +258,7 @@ CREATE TABLE `utenti` (
   `password` varchar(255) NOT NULL,
   `ruolo` enum('admin','docente','tecnico') NOT NULL DEFAULT 'docente',
   `telefono` varchar(20) DEFAULT NULL,
+  `avatar` varchar(500) DEFAULT NULL COMMENT 'Path relativo foto profilo (es. uploads/avatars/1_1234567890.jpg)',
   `attivo` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -266,14 +268,14 @@ CREATE TABLE `utenti` (
 -- Dump dei dati per la tabella `utenti`
 --
 
-INSERT INTO `utenti` (`id`, `nome`, `cognome`, `email`, `password`, `ruolo`, `telefono`, `attivo`, `created_at`, `updated_at`) VALUES
-(1, 'Daniele', 'Signorile', 'daniele.signorile@itisff.it', '123456', 'admin', '+39 333-1111111', 1, '2026-04-28 10:17:13', '2026-04-29 11:42:56'),
-(2, 'Peter', 'Old', 'pietro.vecchio@itisff.it', '123456', 'docente', '+39 333-2222222', 1, '2026-04-28 10:17:13', '2026-04-30 09:05:05'),
-(4, 'Elena', 'Torricelli', 'elena.torricelli@itsff.it', 'tecnico2026', 'tecnico', '333-4444444', 1, '2026-04-28 10:17:13', '2026-04-29 18:40:42'),
-(5, 'Roberto', 'Boyle', 'roberto.boyle@itsff.it', 'docente1', 'docente', NULL, 1, '2026-04-28 10:17:13', '2026-04-28 10:17:13'),
-(8, 'Roberto', 'Invidia', 'Roberto.invidia@itisff.it', '123456', 'docente', NULL, 1, '2026-04-29 11:35:32', '2026-04-29 19:11:03'),
-(9, 'Francesco', 'Camarda', 'francesco.camarda@itisff.it', '123456', 'tecnico', '+39 1234567889', 1, '2026-04-30 07:11:55', '2026-04-30 07:11:55'),
-(12, 'Francesco', 'Camarda', 'daniele.signorile@itsff.it', 'cambiami2026', 'docente', '+39 2222222222222', 1, '2026-04-30 07:18:22', '2026-04-30 07:18:22');
+INSERT INTO `utenti` (`id`, `nome`, `cognome`, `email`, `password`, `ruolo`, `telefono`, `avatar`, `attivo`, `created_at`, `updated_at`) VALUES
+(1, 'Daniele', 'Signorile', 'daniele.signorile@itisff.it', '123456', 'admin', '+39 333-1111111', NULL, 1, '2026-04-28 10:17:13', '2026-04-29 11:42:56'),
+(2, 'Peter', 'Old', 'pietro.vecchio@itisff.it', '123456', 'docente', '+39 333-2222222', NULL, 1, '2026-04-28 10:17:13', '2026-04-30 09:05:05'),
+(4, 'Elena', 'Torricelli', 'elena.torricelli@itsff.it', 'tecnico2026', 'tecnico', '333-4444444', NULL, 1, '2026-04-28 10:17:13', '2026-04-29 18:40:42'),
+(5, 'Roberto', 'Boyle', 'roberto.boyle@itsff.it', 'docente1', 'docente', NULL, NULL, 1, '2026-04-28 10:17:13', '2026-04-28 10:17:13'),
+(8, 'Roberto', 'Invidia', 'Roberto.invidia@itisff.it', '123456', 'docente', NULL, NULL, 1, '2026-04-29 11:35:32', '2026-04-29 19:11:03'),
+(9, 'Francesco', 'Camarda', 'francesco.camarda@itisff.it', '123456', 'tecnico', '+39 1234567889', NULL, 1, '2026-04-30 07:11:55', '2026-04-30 07:11:55'),
+(12, 'Francesco', 'Camarda', 'daniele.signorile@itsff.it', 'cambiami2026', 'docente', '+39 2222222222222', NULL, 1, '2026-04-30 07:18:22', '2026-04-30 07:18:22');
 
 -- --------------------------------------------------------
 
@@ -304,80 +306,50 @@ INSERT INTO `utilizzo_materiali` (`id`, `id_sessione`, `id_materiale`, `quantita
 -- Indici per le tabelle scaricate
 --
 
---
--- Indici per le tabelle `classi`
---
 ALTER TABLE `classi`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uk_classe_anno` (`nome`,`anno_scolastico`);
 
---
--- Indici per le tabelle `docenti_laboratori`
---
 ALTER TABLE `docenti_laboratori`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uk_docente_lab` (`id_docente`,`id_laboratorio`),
   ADD KEY `fk_dl_laboratorio` (`id_laboratorio`);
 
---
--- Indici per le tabelle `firme_sessioni`
---
 ALTER TABLE `firme_sessioni`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uk_firma` (`id_sessione`,`id_docente`),
   ADD KEY `fk_firma_docente` (`id_docente`);
 
---
--- Indici per le tabelle `laboratori`
---
 ALTER TABLE `laboratori`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_lab_assistente` (`id_assistente_tecnico`),
   ADD KEY `fk_lab_responsabile` (`id_responsabile`);
 
---
--- Indici per le tabelle `materiali`
---
 ALTER TABLE `materiali`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_materiale_lab` (`id_laboratorio`);
 
---
--- Indici per le tabelle `segnalazioni`
---
 ALTER TABLE `segnalazioni`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_segn_lab` (`id_laboratorio`),
   ADD KEY `fk_segn_sessione` (`id_sessione`),
   ADD KEY `fk_segn_utente` (`id_utente`);
 
---
--- Indici per le tabelle `sessioni_laboratorio`
---
 ALTER TABLE `sessioni_laboratorio`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_sessione_lab` (`id_laboratorio`),
   ADD KEY `fk_sessione_classe` (`id_classe`);
 
---
--- Indici per le tabelle `sessioni_materiali`
---
 ALTER TABLE `sessioni_materiali`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_sess_mat` (`id_sessione`,`id_materiale`),
   ADD KEY `idx_sessione` (`id_sessione`),
   ADD KEY `idx_materiale` (`id_materiale`);
 
---
--- Indici per le tabelle `utenti`
---
 ALTER TABLE `utenti`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`);
 
---
--- Indici per le tabelle `utilizzo_materiali`
---
 ALTER TABLE `utilizzo_materiali`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uk_utilizzo` (`id_sessione`,`id_materiale`),
@@ -387,63 +359,33 @@ ALTER TABLE `utilizzo_materiali`
 -- AUTO_INCREMENT per le tabelle scaricate
 --
 
---
--- AUTO_INCREMENT per la tabella `classi`
---
 ALTER TABLE `classi`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
---
--- AUTO_INCREMENT per la tabella `docenti_laboratori`
---
 ALTER TABLE `docenti_laboratori`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
---
--- AUTO_INCREMENT per la tabella `firme_sessioni`
---
 ALTER TABLE `firme_sessioni`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
---
--- AUTO_INCREMENT per la tabella `laboratori`
---
 ALTER TABLE `laboratori`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
---
--- AUTO_INCREMENT per la tabella `materiali`
---
 ALTER TABLE `materiali`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
---
--- AUTO_INCREMENT per la tabella `segnalazioni`
---
 ALTER TABLE `segnalazioni`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
---
--- AUTO_INCREMENT per la tabella `sessioni_laboratorio`
---
 ALTER TABLE `sessioni_laboratorio`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
---
--- AUTO_INCREMENT per la tabella `sessioni_materiali`
---
 ALTER TABLE `sessioni_materiali`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT per la tabella `utenti`
---
 ALTER TABLE `utenti`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
---
--- AUTO_INCREMENT per la tabella `utilizzo_materiali`
---
 ALTER TABLE `utilizzo_materiali`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
@@ -451,51 +393,30 @@ ALTER TABLE `utilizzo_materiali`
 -- Limiti per le tabelle scaricate
 --
 
---
--- Limiti per la tabella `docenti_laboratori`
---
 ALTER TABLE `docenti_laboratori`
   ADD CONSTRAINT `fk_dl_docente` FOREIGN KEY (`id_docente`) REFERENCES `utenti` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_dl_laboratorio` FOREIGN KEY (`id_laboratorio`) REFERENCES `laboratori` (`id`) ON DELETE CASCADE;
 
---
--- Limiti per la tabella `firme_sessioni`
---
 ALTER TABLE `firme_sessioni`
   ADD CONSTRAINT `fk_firma_docente` FOREIGN KEY (`id_docente`) REFERENCES `utenti` (`id`),
   ADD CONSTRAINT `fk_firma_sessione` FOREIGN KEY (`id_sessione`) REFERENCES `sessioni_laboratorio` (`id`) ON DELETE CASCADE;
 
---
--- Limiti per la tabella `laboratori`
---
 ALTER TABLE `laboratori`
   ADD CONSTRAINT `fk_lab_assistente` FOREIGN KEY (`id_assistente_tecnico`) REFERENCES `utenti` (`id`),
   ADD CONSTRAINT `fk_lab_responsabile` FOREIGN KEY (`id_responsabile`) REFERENCES `utenti` (`id`);
 
---
--- Limiti per la tabella `materiali`
---
 ALTER TABLE `materiali`
   ADD CONSTRAINT `fk_materiale_lab` FOREIGN KEY (`id_laboratorio`) REFERENCES `laboratori` (`id`);
 
---
--- Limiti per la tabella `segnalazioni`
---
 ALTER TABLE `segnalazioni`
   ADD CONSTRAINT `fk_segn_lab` FOREIGN KEY (`id_laboratorio`) REFERENCES `laboratori` (`id`),
   ADD CONSTRAINT `fk_segn_sessione` FOREIGN KEY (`id_sessione`) REFERENCES `sessioni_laboratorio` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_segn_utente` FOREIGN KEY (`id_utente`) REFERENCES `utenti` (`id`);
 
---
--- Limiti per la tabella `sessioni_laboratorio`
---
 ALTER TABLE `sessioni_laboratorio`
   ADD CONSTRAINT `fk_sessione_classe` FOREIGN KEY (`id_classe`) REFERENCES `classi` (`id`),
   ADD CONSTRAINT `fk_sessione_lab` FOREIGN KEY (`id_laboratorio`) REFERENCES `laboratori` (`id`);
 
---
--- Limiti per la tabella `utilizzo_materiali`
---
 ALTER TABLE `utilizzo_materiali`
   ADD CONSTRAINT `fk_utilizzo_materiale` FOREIGN KEY (`id_materiale`) REFERENCES `materiali` (`id`),
   ADD CONSTRAINT `fk_utilizzo_sessione` FOREIGN KEY (`id_sessione`) REFERENCES `sessioni_laboratorio` (`id`) ON DELETE CASCADE;
