@@ -204,7 +204,7 @@ if (!$canReport && isDocente()) {
                     </div>
                 </div>
                 <a href="<?= BASE_PATH ?>/pages/seleziona_laboratorio.php" class="sidebar-change-lab">
-                    ⇄ <?= L('nav_cambia_lab') ?>
+                    ⇆ <?= L('nav_cambia_lab') ?>
                 </a>
             </div>
             <?php endif; ?>
