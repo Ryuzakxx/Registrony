@@ -1,0 +1,253 @@
+/* ============================================================
+   REGISTRONY — Responsive / Mobile-first Styles
+   Breakpoints:
+     xs  : < 480px   (smartphone piccoli)
+     sm  : 480–767px (smartphone grandi)
+     md  : 768–1023px (tablet)
+     lg  : >= 1024px  (desktop — default)
+   ============================================================ */
+
+/* ============================================================
+   SIDEBAR OVERLAY & TOGGLING
+   ============================================================ */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 999;
+    backdrop-filter: blur(1px);
+    transition: opacity 200ms ease;
+}
+.sidebar-overlay.active { display: block; }
+
+/* ============================================================
+   TABLET (768px – 1023px)
+   ============================================================ */
+@media (max-width: 1023px) {
+    /* Sidebar: nascondi e fai scivolare da sinistra */
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 1100;
+        width: 270px;
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    .main-content { margin-left: 0 !important; }
+
+    /* Mostra il burger button */
+    .menu-toggle { display: flex !important; }
+
+    /* Header: riduci padding e gestisci overflow testo */
+    .top-header {
+        padding: 0 14px;
+        gap: 8px;
+    }
+    .top-header .page-title {
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+    .header-actions { gap: 8px; }
+    .header-actions .text-muted { display: none; } /* nasconde la data su schermi stretti */
+
+    /* Stats grid: 2 colonne fisse su tablet */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    /* Card header: metti azioni su riga separata */
+    .card-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .card-header > div,
+    .card-header > form {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    /* Table: abilita scroll orizzontale */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 0 0 var(--radius) var(--radius);
+    }
+
+    /* Modals: più larghi su tablet */
+    .modal { max-width: 90vw; }
+
+    /* Form rows: 2 colonne su tablet */
+    .form-row { grid-template-columns: repeat(2, 1fr); }
+
+    /* Page padding ridotto */
+    .page-content { padding: 18px 16px; }
+}
+
+/* ============================================================
+   SMARTPHONE (< 768px)
+   ============================================================ */
+@media (max-width: 767px) {
+    /* --- Layout --- */
+    .page-content { padding: 12px; }
+
+    /* --- Stats: 2 colonne compatte, poi 1 colonna sotto 400px --- */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    .stat-card {
+        padding: 12px;
+        gap: 10px;
+    }
+    .stat-card .stat-icon {
+        width: 38px;
+        height: 38px;
+    }
+    .stat-card .stat-info .stat-value { font-size: 20px; }
+    .stat-card .stat-info .stat-label { font-size: 11px; }
+
+    /* --- Card --- */
+    .card { margin-bottom: 12px; }
+    .card-header {
+        padding: 11px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .card-header h3 { font-size: 13.5px; }
+    .card-body { padding: 12px; }
+    .card-footer { padding: 10px 14px; }
+
+    /* --- Buttons: più facili da toccare (min 44px touch target) --- */
+    .btn { min-height: 38px; padding: 8px 14px; font-size: 13px; }
+    .btn-sm { min-height: 32px; padding: 5px 10px; font-size: 12px; }
+
+    /* --- Forms --- */
+    .form-row { grid-template-columns: 1fr; }
+    .form-control { font-size: 16px; } /* previene zoom automatico su iOS */
+
+    /* --- Table: scroll orizzontale + righe più leggibili --- */
+    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table th, .table td {
+        padding: 8px 10px;
+        font-size: 12.5px;
+        white-space: nowrap;
+    }
+
+    /* --- Modal: full-width con margine --- */
+    .modal-overlay { padding: 10px; }
+    .modal {
+        max-width: 100%;
+        max-height: 95vh;
+        border-radius: 10px;
+    }
+    .modal-header { padding: 14px 16px; }
+    .modal-body   { padding: 14px 16px; }
+    .modal-footer { padding: 12px 16px; flex-wrap: wrap; gap: 6px; }
+    .modal-footer .btn { flex: 1; justify-content: center; }
+
+    /* --- Header --- */
+    .top-header { padding: 0 12px; height: 54px; }
+    .top-header .page-title {
+        font-size: 13.5px;
+        max-width: 130px;
+    }
+    .lab-chip-header { display: none; } /* nasconde il chip lab nella header su schermi piccoli */
+
+    /* --- Registro Timeline --- */
+    .registro-entry { gap: .6rem; padding: .7rem 0; }
+    .registro-orario { min-width: 44px; font-size: .78rem; }
+    .registro-header-row { flex-direction: column; align-items: flex-start; gap: .3rem; }
+    .registro-attivita { font-size: .84rem; }
+    .registro-firme { gap: .3rem; }
+    .firma-chip { font-size: .72rem; padding: 2px 8px; }
+    .registro-divider { margin-left: 50px; }
+
+    /* --- Storico mini-date: wrappano bene su schermi piccoli --- */
+    .storico-mini { gap: .3rem; }
+    .storico-chip { font-size: .72rem; padding: 2px 7px; }
+
+    /* --- Materiali grid: 2 colonne su phone --- */
+    .materiali-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: .6rem;
+    }
+    .materiale-card { padding: .6rem .75rem; }
+    .materiale-nome { font-size: .82rem; }
+    .materiale-qty  { font-size: .98rem; }
+
+    /* --- Registro Banner --- */
+    .registro-banner { padding: .8rem 1rem; }
+    .registro-lab-nome { font-size: 1rem; }
+
+    /* --- Pagination --- */
+    .pagination { flex-wrap: wrap; gap: 3px; }
+    .pagination a, .pagination span { padding: 6px 10px; font-size: 12px; }
+
+    /* --- Alerts --- */
+    .alert { padding: 11px 38px 11px 12px; font-size: 13px; }
+
+    /* --- Utilità flex su mobile --- */
+    .mobile-stack { flex-direction: column !important; }
+    .mobile-hide  { display: none !important; }
+    .mobile-full  { width: 100% !important; }
+}
+
+/* ============================================================
+   SMARTPHONE PICCOLI (< 480px)
+   ============================================================ */
+@media (max-width: 479px) {
+    /* Stats: 1 colonna per schermi molto piccoli */
+    .stats-grid { grid-template-columns: 1fr; }
+
+    /* Materiali: 1 colonna */
+    .materiali-grid { grid-template-columns: 1fr; }
+
+    /* Titolo header ancora più corto */
+    .top-header .page-title { max-width: 90px; font-size: 13px; }
+
+    /* Riduce padding card-body */
+    .card-body { padding: 10px; }
+
+    /* Form date filter: impila su colonna */
+    .card-header form.d-flex {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+    .card-header form.d-flex input[type="date"] {
+        width: 100% !important;
+    }
+    .card-header form.d-flex .btn,
+    .card-header form.d-flex a.btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ============================================================
+   TOUCH / POINTER FINE: evita hover su touchscreen
+   ============================================================ */
+@media (hover: none) and (pointer: coarse) {
+    .sidebar-nav a:hover { background: transparent; color: var(--sidebar-text); }
+    .sidebar-nav a.active:hover { background: var(--sidebar-active-bg); color: var(--sidebar-active-color); }
+    .btn:hover { filter: brightness(0.96); }
+}
+
+/* ============================================================
+   PRINT: nascondi sidebar e header
+   ============================================================ */
+@media print {
+    .sidebar, .top-header, .sidebar-overlay, .menu-toggle,
+    .btn, .storico-mini, .header-actions { display: none !important; }
+    .main-content { margin-left: 0 !important; }
+    .page-content { padding: 0 !important; }
+    .card { box-shadow: none; border: 1px solid #ddd; }
+}
