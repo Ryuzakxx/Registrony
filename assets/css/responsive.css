@@ -8,6 +8,96 @@
    ============================================================ */
 
 /* ============================================================
+   DESKTOP (>= 1024px) — raffinamenti per schermi grandi
+   ============================================================ */
+@media (min-width: 1024px) {
+    /* Sidebar sempre visibile e fissa */
+    .sidebar {
+        transform: translateX(0) !important;
+    }
+
+    /* Layout principale: affianca sidebar + contenuto */
+    .main-content {
+        margin-left: var(--sidebar-width);
+    }
+
+    /* Nascondi il burger — non serve su desktop */
+    .menu-toggle {
+        display: none !important;
+    }
+
+    /* Page content: padding generoso */
+    .page-content {
+        padding: 28px 32px;
+        max-width: 1400px;
+    }
+
+    /* Stats grid: fino a 4 colonne su schermi larghi */
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 18px;
+    }
+
+    /* Card header: allineamento orizzontale stabile */
+    .card-header {
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Form row: 2 colonne di default su desktop */
+    .form-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
+    }
+
+    /* Tabelle: leggibili con padding generoso */
+    .table th,
+    .table td {
+        padding: 12px 18px;
+        font-size: 13.5px;
+    }
+
+    /* Modal: larghezza max 640px */
+    .modal {
+        max-width: 640px;
+    }
+
+    /* Registro banner: non va a capo */
+    .registro-banner {
+        flex-wrap: nowrap;
+    }
+
+    /* Top header: testo pagina più grande */
+    .top-header .page-title {
+        font-size: 16px;
+    }
+}
+
+/* ============================================================
+   DESKTOP LARGO (>= 1280px) — schermi wide
+   ============================================================ */
+@media (min-width: 1280px) {
+    .page-content {
+        padding: 32px 40px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+    }
+
+    .form-row {
+        gap: 20px;
+    }
+
+    /* Materiali: più colonne su schermi molto larghi */
+    .materiali-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+}
+
+/* ============================================================
    SIDEBAR OVERLAY & TOGGLING
    ============================================================ */
 .sidebar-overlay {
@@ -39,37 +129,51 @@
     /* Mostra il burger button */
     .menu-toggle { display: flex !important; }
 
-    /* Header: riduci padding e gestisci overflow testo */
+    /* Header: padding e gestione overflow testo */
     .top-header {
-        padding: 0 14px;
-        gap: 8px;
+        padding: 0 16px;
+        gap: 10px;
     }
     .top-header .page-title {
-        font-size: 14px;
+        font-size: 15px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 180px;
+        max-width: 260px;
     }
-    .header-actions { gap: 8px; }
-    .header-actions .text-muted { display: none; } /* nasconde la data su schermi stretti */
+    .header-actions { gap: 10px; }
+
+    /* Page content: padding medio */
+    .page-content { padding: 20px; }
 
     /* Stats grid: 2 colonne fisse su tablet */
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        margin-bottom: 16px;
+        gap: 14px;
+        margin-bottom: 18px;
     }
 
-    /* Card header: metti azioni su riga separata */
+    /* Stat card: leggermente più compatta */
+    .stat-card {
+        padding: 16px 18px;
+        gap: 14px;
+    }
+    .stat-card .stat-icon {
+        width: 42px;
+        height: 42px;
+    }
+    .stat-card .stat-info .stat-value { font-size: 24px; }
+
+    /* Card header: può andare a capo ma in modo controllato */
     .card-header {
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 10px;
+        padding: 14px 18px;
     }
     .card-header > div,
     .card-header > form {
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 8px;
     }
 
     /* Table: abilita scroll orizzontale */
@@ -78,15 +182,58 @@
         -webkit-overflow-scrolling: touch;
         border-radius: 0 0 var(--radius) var(--radius);
     }
+    .table th,
+    .table td {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
 
     /* Modals: più larghi su tablet */
-    .modal { max-width: 90vw; }
+    .modal { max-width: 85vw; }
 
     /* Form rows: 2 colonne su tablet */
-    .form-row { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: repeat(2, 1fr); gap: 14px; }
 
-    /* Page padding ridotto */
-    .page-content { padding: 18px 16px; }
+    /* Materiali: 3 colonne su tablet */
+    .materiali-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: .65rem;
+    }
+
+    /* Registro banner: va a capo se serve */
+    .registro-banner {
+        flex-wrap: wrap;
+        gap: .65rem;
+    }
+    .registro-lab-nome { font-size: 1.05rem; }
+
+    /* Chip lab header: visibile su tablet (era nascosto su mobile) */
+    .lab-chip-header { display: inline-flex; }
+
+    /* Dropdown utente: larghezza fissa */
+    .user-dropdown { min-width: 220px; }
+
+    /* Nasconde la data nel header su tablet stretto */
+    .header-actions .text-muted { display: none; }
+}
+
+/* ============================================================
+   TABLET PICCOLO / SMARTPHONE GRANDE (600–767px)
+   ============================================================ */
+@media (max-width: 767px) and (min-width: 600px) {
+    .page-content { padding: 16px 18px; }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .materiali-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: .55rem;
+    }
+
+    .top-header .page-title { max-width: 200px; }
 }
 
 /* ============================================================
