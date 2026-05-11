@@ -84,6 +84,23 @@ if (!$canReport && isDocente()) {
         .sidebar-user-trigger:hover {
             background: rgba(255,255,255,.08);
         }
+        /* Nome e ruolo nella sidebar: sempre bianchi/chiari su sfondo scuro */
+        .sidebar-user-trigger .user-name {
+            color: #fff;
+            font-weight: 600;
+            font-size: .875rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar-user-trigger .user-role {
+            color: rgba(255, 255, 255, 0.60);
+            font-size: .75rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-transform: capitalize;
+        }
         .sidebar-user-trigger:hover .user-name {
             color: #fff;
         }
@@ -289,11 +306,11 @@ if (!$canReport && isDocente()) {
                 <div class="user-avatar"><?= htmlspecialchars($initials) ?></div>
                 <div class="user-info">
                     <div class="user-name"><?= htmlspecialchars($currentUser['nome_completo']) ?></div>
-                    <div class="user-role"><?= htmlspecialchars($currentUser['ruolo']) ?></div>
+                    <div class="user-role"><?= htmlspecialchars(ucfirst($currentUser['ruolo'])) ?></div>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     style="flex-shrink:0;opacity:.5;margin-left:auto" aria-hidden="true"
+                     style="flex-shrink:0;opacity:.5;margin-left:auto;color:#fff" aria-hidden="true"
                      id="userChevron">
                     <polyline points="18 15 12 9 6 15"/>
                 </svg>
