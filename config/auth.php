@@ -4,22 +4,47 @@ session_start();
 require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/database.php';
 
+/**
+ * Verifica le credenziali e avvia la sessione.
+ * Supporta sia password in chiaro (legacy) sia password_hash (bcrypt).
+ * Se la password è legacy, la migra automaticamente a bcrypt.
+ */
 function login(string $email, string $password): bool {
     $conn  = getConnection();
     $email = mysqli_real_escape_string($conn, $email);
-    $result = mysqli_query($conn, "SELECT id, nome, cognome, email, password, ruolo, attivo FROM utenti WHERE email = '$email'");
-    $user   = mysqli_fetch_assoc($result);
-    if ($user && $user['attivo'] && $password === $user['password']) {
-        $_SESSION['user_id']            = $user['id'];
-        $_SESSION['user_nome']          = $user['nome'];
-        $_SESSION['user_cognome']       = $user['cognome'];
-        $_SESSION['user_email']         = $user['email'];
-        $_SESSION['user_ruolo']         = $user['ruolo'];
-        $_SESSION['user_nome_completo'] = $user['cognome'] . ' ' . $user['nome'];
-        unset($_SESSION['selected_lab_id']);
-        return true;
+    $result = mysqli_query($conn, "
+        SELECT id, nome, cognome, email, password, ruolo, attivo, must_change_password
+        FROM utenti
+        WHERE email = '$email'
+        LIMIT 1
+    ");
+    $user = mysqli_fetch_assoc($result);
+    if (!$user || !$user['attivo']) return false;
+
+    $valid = false;
+
+    // Prova prima con password_verify (bcrypt)
+    if (password_verify($password, $user['password'])) {
+        $valid = true;
+    } elseif ($password === $user['password']) {
+        // Password legacy in chiaro: valida ma la migriamo subito a bcrypt
+        $valid = true;
+        $hash  = password_hash($password, PASSWORD_BCRYPT);
+        $hash  = mysqli_real_escape_string($conn, $hash);
+        mysqli_query($conn, "UPDATE utenti SET password = '$hash' WHERE id = {$user['id']}");
     }
-    return false;
+
+    if (!$valid) return false;
+
+    $_SESSION['user_id']                  = $user['id'];
+    $_SESSION['user_nome']                = $user['nome'];
+    $_SESSION['user_cognome']             = $user['cognome'];
+    $_SESSION['user_email']               = $user['email'];
+    $_SESSION['user_ruolo']               = $user['ruolo'];
+    $_SESSION['user_nome_completo']       = $user['cognome'] . ' ' . $user['nome'];
+    $_SESSION['must_change_password']     = (bool)($user['must_change_password'] ?? false);
+    unset($_SESSION['selected_lab_id']);
+    return true;
 }
 
 function logout(): void {
@@ -43,6 +68,10 @@ function isTecnico(): bool {
 
 function isDocente(): bool {
     return isset($_SESSION['user_ruolo']) && $_SESSION['user_ruolo'] === 'docente';
+}
+
+function mustChangePassword(): bool {
+    return !empty($_SESSION['must_change_password']);
 }
 
 function getTechnicianLabs(int $userId): array {
@@ -165,9 +194,19 @@ function hasUserColumn(mysqli $conn, string $column): bool {
     return $res && mysqli_num_rows($res) > 0;
 }
 
+/**
+ * Richiede che l'utente sia loggato.
+ * Se deve cambiare password (primo accesso), lo reindirizza alla pagina dedicata.
+ */
 function requireLogin(): void {
     if (!isLoggedIn()) {
         header('Location: ' . BASE_PATH . '/login.php');
+        exit;
+    }
+    // Forza cambio password al primo accesso (escludi la pagina stessa)
+    $currentFile = basename($_SERVER['PHP_SELF']);
+    if (mustChangePassword() && $currentFile !== 'cambia_password.php') {
+        header('Location: ' . BASE_PATH . '/pages/cambia_password.php');
         exit;
     }
 }
