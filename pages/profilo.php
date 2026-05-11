@@ -1,7 +1,4 @@
 <?php
-/* ================================================================
-   PROFILO UTENTE — cambia email, password e visualizza le info
-   ================================================================ */
 require_once __DIR__ . '/../config/auth.php';
 requireLogin();
 
@@ -9,14 +6,12 @@ $conn = getConnection();
 $L    = lang();
 $uid  = (int)getCurrentUserId();
 
-// ── Helper: verifica se una tabella esiste ───────────────────────
 function tableExists(mysqli $conn, string $table): bool {
     $t = mysqli_real_escape_string($conn, $table);
     $r = mysqli_query($conn, "SHOW TABLES LIKE '$t'");
     return $r && mysqli_num_rows($r) > 0;
 }
 
-// ── Ricarica utente fresco dal DB ────────────────────────────────
 function reloadUser(mysqli $conn, int $uid): array {
     $r = mysqli_query($conn, "SELECT * FROM utenti WHERE id = $uid LIMIT 1");
     return mysqli_fetch_assoc($r) ?? [];
@@ -27,7 +22,6 @@ $user = reloadUser($conn, $uid);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    // ── Aggiorna info personali (nome, cognome, telefono) ─────────
     if ($action === 'update_info') {
         $nome     = mb_convert_case(mb_strtolower(trim($_POST['nome']    ?? ''), 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
         $cognome  = mb_convert_case(mb_strtolower(trim($_POST['cognome'] ?? ''), 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
@@ -36,16 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$nome)    $errors[] = 'Il nome è obbligatorio.';
         if (!$cognome) $errors[] = 'Il cognome è obbligatorio.';
-        if ($telefono && !preg_match('/^[0-9\s\+\-\.()\]{7,25}$/', $telefono)) $errors[] = 'Formato telefono non valido.';
+        if ($telefono && !preg_match('/^[0-9\s\+\-\.()]{7,25}$/', $telefono)) $errors[] = 'Formato telefono non valido.';
 
         if (empty($errors)) {
-            $n_e  = mysqli_real_escape_string($conn, $nome);
-            $c_e  = mysqli_real_escape_string($conn, $cognome);
+            $n_e   = mysqli_real_escape_string($conn, $nome);
+            $c_e   = mysqli_real_escape_string($conn, $cognome);
             $t_SQL = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
             mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', telefono=$t_SQL WHERE id=$uid");
-            $_SESSION['user_nome']     = $nome;
-            $_SESSION['user_cognome']  = $cognome;
-            $_SESSION['nome_completo'] = $nome . ' ' . $cognome;
+            $_SESSION['user_nome']          = $nome;
+            $_SESSION['user_cognome']       = $cognome;
+            $_SESSION['user_nome_completo'] = $cognome . ' ' . $nome;
             header('Location: ' . BASE_PATH . '/pages/profilo.php?success=' . urlencode('Informazioni aggiornate con successo.'));
         } else {
             header('Location: ' . BASE_PATH . '/pages/profilo.php?error=' . urlencode(implode(' | ', $errors)) . '&tab=info');
@@ -53,7 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // ── Cambia email ──────────────────────────────────────────────
     if ($action === 'update_email') {
         $newEmail  = strtolower(trim($_POST['email']         ?? ''));
         $confEmail = strtolower(trim($_POST['email_confirm'] ?? ''));
@@ -84,15 +77,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // ── Cambia password ───────────────────────────────────────────
     if ($action === 'update_password') {
-        $oldPwd  = $_POST['old_password']    ?? '';
-        $newPwd  = $_POST['new_password']    ?? '';
+        $oldPwd  = $_POST['old_password']     ?? '';
+        $newPwd  = $_POST['new_password']     ?? '';
         $confPwd = $_POST['confirm_password'] ?? '';
         $errors  = [];
 
-        if (!$oldPwd)            $errors[] = 'Inserisci la password attuale.';
-        if (strlen($newPwd) < 6) $errors[] = 'La nuova password deve avere almeno 6 caratteri.';
+        if (!$oldPwd)             $errors[] = 'Inserisci la password attuale.';
+        if (strlen($newPwd) < 6)  $errors[] = 'La nuova password deve avere almeno 6 caratteri.';
         if ($newPwd !== $confPwd) $errors[] = 'Le due password non coincidono.';
 
         if (empty($errors) && !password_verify($oldPwd, $user['password'])) {
@@ -100,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors)) {
-            $hash  = mysqli_real_escape_string($conn, password_hash($newPwd, PASSWORD_BCRYPT));
+            $hash   = mysqli_real_escape_string($conn, password_hash($newPwd, PASSWORD_BCRYPT));
             $hasMCP = _columnExists($conn, 'utenti', 'must_change_password');
             $mcpSet = $hasMCP ? ', must_change_password = 0' : '';
             mysqli_query($conn, "UPDATE utenti SET password='$hash'$mcpSet WHERE id=$uid");
@@ -112,11 +104,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ── Dati per la pagina ────────────────────────────────────────────
 $user      = reloadUser($conn, $uid);
 $activeTab = $_GET['tab'] ?? 'info';
 
-// Sessioni recenti — il docente è collegato tramite firme_sessioni
 $sessioni = [];
 $totSess  = 0;
 if (tableExists($conn, 'sessioni_laboratorio')) {
@@ -146,7 +136,6 @@ if (tableExists($conn, 'sessioni_laboratorio')) {
     $totSess = $rTot ? (int)(mysqli_fetch_assoc($rTot)['n'] ?? 0) : 0;
 }
 
-// Segnalazioni — la colonna è id_utente, non id_docente
 $totSegnR = 0;
 if (tableExists($conn, 'segnalazioni')) {
     $rSegn = mysqli_query($conn, "SELECT COUNT(*) AS n FROM segnalazioni WHERE id_utente = $uid");
@@ -170,8 +159,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 @media (max-width: 900px) {
     .profilo-grid { grid-template-columns: 1fr; }
 }
-
-/* Card profilo laterale */
 .profilo-card-user {
     background: var(--bg-white);
     border: 1px solid var(--border);
@@ -205,7 +192,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
     padding: 2px 10px; border-radius: 20px; margin-top: .25rem;
 }
 .profilo-card-email { color: rgba(255,255,255,.7); font-size: .8rem; margin-top: .5rem; word-break: break-all; }
-
 .profilo-stats {
     display: grid; grid-template-columns: 1fr 1fr;
     border-top: 1px solid var(--border);
@@ -218,7 +204,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 .profilo-stat:last-child { border-right: none; }
 .profilo-stat-num   { font-size: 1.5rem; font-weight: 700; color: var(--accent); line-height: 1; }
 .profilo-stat-label { font-size: .72rem; color: var(--text-light); margin-top: 3px; text-transform: uppercase; letter-spacing: .5px; }
-
 .profilo-card-body  { padding: 1rem 1.25rem; background: var(--bg-white); }
 .profilo-info-row   {
     display: flex; align-items: flex-start; gap: .6rem;
@@ -228,8 +213,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 .profilo-info-row:last-child { border-bottom: none; }
 .profilo-info-label { color: var(--text-light); min-width: 82px; font-size: .78rem; text-transform: uppercase; letter-spacing: .4px; padding-top: 1px; flex-shrink: 0; }
 .profilo-info-value { font-weight: 500; flex: 1; word-break: break-all; color: var(--text); }
-
-/* Tab nav */
 .profilo-tabs {
     display: flex; gap: .25rem;
     margin-bottom: 1.25rem;
@@ -249,12 +232,8 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 }
 .profilo-tab:hover { color: var(--accent); }
 .profilo-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(59,130,246,.06); }
-
-/* Panel */
 .profilo-panel { display: none; }
 .profilo-panel.active { display: block; }
-
-/* Sessioni recenti */
 .sessioni-list { display: flex; flex-direction: column; gap: .5rem; }
 .sessione-row {
     display: flex; align-items: center; gap: .75rem;
@@ -268,8 +247,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 .sessione-date  { font-weight: 600; color: var(--text); }
 .sessione-meta  { color: var(--text-light); font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sessione-badge { font-size: .72rem; padding: 2px 8px; border-radius: 20px; background: var(--primary-light); color: var(--accent); border: 1px solid #bfdbfe; white-space: nowrap; }
-
-/* Password toggle */
 .pwd-toggle-btn {
     position: absolute; right: 32px; top: 50%; transform: translateY(-50%);
     background: none; border: none; cursor: pointer; font-size: 15px;
@@ -279,8 +256,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 </style>
 
 <div class="profilo-grid">
-
-    <!-- ── Sidebar card utente ────────────────────────────────── -->
     <div>
         <div class="profilo-card-user">
             <div class="profilo-card-header">
@@ -291,7 +266,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 <div class="profilo-card-role"><?= htmlspecialchars(ucfirst($user['ruolo'])) ?></div>
                 <div class="profilo-card-email"><?= htmlspecialchars($user['email']) ?></div>
             </div>
-
             <div class="profilo-stats">
                 <div class="profilo-stat">
                     <div class="profilo-stat-num"><?= $totSess ?></div>
@@ -302,7 +276,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                     <div class="profilo-stat-label">Segnalazioni</div>
                 </div>
             </div>
-
             <div class="profilo-card-body">
                 <div class="profilo-info-row">
                     <span class="profilo-info-label">Nome</span>
@@ -336,14 +309,13 @@ require_once __DIR__ . '/../includes/form_helpers.php';
         </div>
     </div>
 
-    <!-- ── Pannelli destra ───────────────────────────────────── -->
     <div>
         <div class="profilo-tabs" role="tablist">
-            <button class="profilo-tab <?= $activeTab === 'info'     ? 'active' : '' ?>" data-tab="info"     role="tab" aria-selected="<?= $activeTab === 'info'     ? 'true' : 'false' ?>">
+            <button class="profilo-tab <?= $activeTab === 'info' ? 'active' : '' ?>" data-tab="info" role="tab" aria-selected="<?= $activeTab === 'info' ? 'true' : 'false' ?>">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Informazioni
             </button>
-            <button class="profilo-tab <?= $activeTab === 'email'    ? 'active' : '' ?>" data-tab="email"    role="tab" aria-selected="<?= $activeTab === 'email'    ? 'true' : 'false' ?>">
+            <button class="profilo-tab <?= $activeTab === 'email' ? 'active' : '' ?>" data-tab="email" role="tab" aria-selected="<?= $activeTab === 'email' ? 'true' : 'false' ?>">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                 Cambia Email
             </button>
@@ -356,8 +328,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 Sessioni recenti
             </button>
         </div>
-
-        <!-- Tab: Informazioni personali -->
         <div class="profilo-panel card <?= $activeTab === 'info' ? 'active' : '' ?>" id="panel-info" role="tabpanel">
             <div class="card-header"><h3>Informazioni personali</h3></div>
             <div class="card-body">
@@ -365,27 +335,11 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                     <input type="hidden" name="action" value="update_info">
                     <div class="form-row">
                         <?php
-                        formField('nome', 'Nome', [
-                            'value'    => $user['nome'],
-                            'required' => true,
-                            'max'      => 100,
-                            'extra'    => 'autocapitalize="words"',
-                        ]);
-                        formField('cognome', 'Cognome', [
-                            'value'    => $user['cognome'],
-                            'required' => true,
-                            'max'      => 100,
-                            'extra'    => 'autocapitalize="words"',
-                        ]);
+                        formField('nome', 'Nome', ['value' => $user['nome'], 'required' => true, 'max' => 100, 'extra' => 'autocapitalize="words"']);
+                        formField('cognome', 'Cognome', ['value' => $user['cognome'], 'required' => true, 'max' => 100, 'extra' => 'autocapitalize="words"']);
                         ?>
                     </div>
-                    <?php
-                    formTelefono('telefono', 'Telefono', [
-                        'value'       => $user['telefono'] ?? '',
-                        'placeholder' => 'es. 333 1234567',
-                        'hint'        => 'Opzionale',
-                    ]);
-                    ?>
+                    <?php formTelefono('telefono', 'Telefono', ['value' => $user['telefono'] ?? '', 'placeholder' => 'es. 333 1234567', 'hint' => 'Opzionale']); ?>
                     <p style="font-size:.8rem;color:var(--text-light);margin-bottom:1rem;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:3px" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                         Per cambiare email o password usa le tab dedicate.
@@ -394,8 +348,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 </form>
             </div>
         </div>
-
-        <!-- Tab: Cambia Email -->
         <div class="profilo-panel card <?= $activeTab === 'email' ? 'active' : '' ?>" id="panel-email" role="tabpanel">
             <div class="card-header"><h3>Cambia indirizzo email</h3></div>
             <div class="card-body">
@@ -405,30 +357,14 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 <form method="POST" novalidate>
                     <input type="hidden" name="action" value="update_email">
                     <?php
-                    formField('email', 'Nuova email', [
-                        'type'         => 'email',
-                        'placeholder'  => 'nuova@email.com',
-                        'required'     => true,
-                        'max'          => 255,
-                        'autocomplete' => 'email',
-                    ]);
-                    formField('email_confirm', 'Conferma nuova email', [
-                        'type'         => 'email',
-                        'placeholder'  => 'ripeti la nuova email',
-                        'required'     => true,
-                        'max'          => 255,
-                        'autocomplete' => 'off',
-                        'extra'        => 'autocorrect="off" autocapitalize="off"',
-                    ]);
+                    formField('email', 'Nuova email', ['type' => 'email', 'placeholder' => 'nuova@email.com', 'required' => true, 'max' => 255, 'autocomplete' => 'email']);
+                    formField('email_confirm', 'Conferma nuova email', ['type' => 'email', 'placeholder' => 'ripeti la nuova email', 'required' => true, 'max' => 255, 'autocomplete' => 'off', 'extra' => 'autocorrect="off" autocapitalize="off"']);
                     ?>
                     <div class="form-group" style="margin-top:.5rem;">
                         <label for="password_check">Password attuale <span class="req-mark" aria-hidden="true">*</span></label>
                         <div class="field-wrap">
-                            <input type="password" id="password_check" name="password_check"
-                                   class="form-control" required autocomplete="current-password"
-                                   placeholder="Inserisci la tua password attuale">
-                            <button type="button" onclick="togglePwd('password_check')" class="pwd-toggle-btn"
-                                    title="Mostra/nascondi" aria-label="Mostra o nascondi password">&#128065;</button>
+                            <input type="password" id="password_check" name="password_check" class="form-control" required autocomplete="current-password" placeholder="Inserisci la tua password attuale">
+                            <button type="button" onclick="togglePwd('password_check')" class="pwd-toggle-btn" title="Mostra/nascondi" aria-label="Mostra o nascondi password">&#128065;</button>
                             <span class="field-status" aria-hidden="true"></span>
                         </div>
                     </div>
@@ -436,8 +372,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 </form>
             </div>
         </div>
-
-        <!-- Tab: Cambia Password -->
         <div class="profilo-panel card <?= $activeTab === 'password' ? 'active' : '' ?>" id="panel-password" role="tabpanel">
             <div class="card-header"><h3>Cambia password</h3></div>
             <div class="card-body">
@@ -446,22 +380,16 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                     <div class="form-group">
                         <label for="old_password">Password attuale <span class="req-mark" aria-hidden="true">*</span></label>
                         <div class="field-wrap">
-                            <input type="password" id="old_password" name="old_password"
-                                   class="form-control" required autocomplete="current-password"
-                                   placeholder="La tua password attuale">
-                            <button type="button" onclick="togglePwd('old_password')" class="pwd-toggle-btn"
-                                    title="Mostra/nascondi" aria-label="Mostra o nascondi">&#128065;</button>
+                            <input type="password" id="old_password" name="old_password" class="form-control" required autocomplete="current-password" placeholder="La tua password attuale">
+                            <button type="button" onclick="togglePwd('old_password')" class="pwd-toggle-btn" title="Mostra/nascondi" aria-label="Mostra o nascondi">&#128065;</button>
                             <span class="field-status" aria-hidden="true"></span>
                         </div>
                     </div>
                     <div class="form-group" style="margin-top:.75rem;">
                         <label for="new_password">Nuova password <span class="req-mark" aria-hidden="true">*</span></label>
                         <div class="field-wrap">
-                            <input type="password" id="new_password" name="new_password"
-                                   class="form-control" required minlength="6" autocomplete="new-password"
-                                   placeholder="Almeno 6 caratteri" style="padding-right:72px">
-                            <button type="button" onclick="togglePwd('new_password')" class="pwd-toggle-btn"
-                                    title="Mostra/nascondi" aria-label="Mostra o nascondi">&#128065;</button>
+                            <input type="password" id="new_password" name="new_password" class="form-control" required minlength="6" autocomplete="new-password" placeholder="Almeno 6 caratteri" style="padding-right:72px">
+                            <button type="button" onclick="togglePwd('new_password')" class="pwd-toggle-btn" title="Mostra/nascondi" aria-label="Mostra o nascondi">&#128065;</button>
                             <span class="field-status" aria-hidden="true"></span>
                         </div>
                         <div id="pwdStrength" style="margin-top:6px;display:none">
@@ -474,11 +402,8 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                     <div class="form-group" style="margin-top:.75rem;">
                         <label for="confirm_password">Conferma nuova password <span class="req-mark" aria-hidden="true">*</span></label>
                         <div class="field-wrap">
-                            <input type="password" id="confirm_password" name="confirm_password"
-                                   class="form-control" required minlength="6" autocomplete="new-password"
-                                   placeholder="Ripeti la nuova password" style="padding-right:72px">
-                            <button type="button" onclick="togglePwd('confirm_password')" class="pwd-toggle-btn"
-                                    title="Mostra/nascondi" aria-label="Mostra o nascondi">&#128065;</button>
+                            <input type="password" id="confirm_password" name="confirm_password" class="form-control" required minlength="6" autocomplete="new-password" placeholder="Ripeti la nuova password" style="padding-right:72px">
+                            <button type="button" onclick="togglePwd('confirm_password')" class="pwd-toggle-btn" title="Mostra/nascondi" aria-label="Mostra o nascondi">&#128065;</button>
                             <span class="field-status" aria-hidden="true"></span>
                         </div>
                         <div class="field-error" id="err_confirm_password" role="alert"></div>
@@ -487,15 +412,9 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 </form>
             </div>
         </div>
-
-        <!-- Tab: Sessioni recenti -->
         <div class="profilo-panel card <?= $activeTab === 'sessioni' ? 'active' : '' ?>" id="panel-sessioni" role="tabpanel">
             <div class="card-header">
-                <h3>Sessioni recenti
-                    <?php if ($totSess > 0): ?>
-                    <small style="font-weight:400;font-size:.8rem;color:var(--text-light)">(ultime 8 di <?= $totSess ?>)</small>
-                    <?php endif; ?>
-                </h3>
+                <h3>Sessioni recenti <?php if ($totSess > 0): ?><small style="font-weight:400;font-size:.8rem;color:var(--text-light)">(ultime 8 di <?= $totSess ?>)</small><?php endif; ?></h3>
             </div>
             <div class="card-body">
                 <?php if (empty($sessioni)): ?>
@@ -511,11 +430,7 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                             <div class="sessione-dot"></div>
                             <div class="sessione-info">
                                 <div class="sessione-date"><?= htmlspecialchars($s['data']) ?> &mdash; <?= htmlspecialchars($s['ora_ingresso']) ?></div>
-                                <div class="sessione-meta">
-                                    <?= htmlspecialchars($s['lab_nome'] ?? '—') ?>
-                                    &bull; Aula <?= htmlspecialchars($s['lab_aula'] ?? '—') ?>
-                                    <?php if ($s['classe_nome']): ?> &bull; <?= htmlspecialchars($s['classe_nome']) ?><?php endif; ?>
-                                </div>
+                                <div class="sessione-meta"><?= htmlspecialchars($s['lab_nome'] ?? '—') ?> &bull; Aula <?= htmlspecialchars($s['lab_aula'] ?? '—') ?><?php if ($s['classe_nome']): ?> &bull; <?= htmlspecialchars($s['classe_nome']) ?><?php endif; ?></div>
                             </div>
                             <span class="sessione-badge"><?= $s['ora_uscita'] ? 'Chiusa' : 'Aperta' ?></span>
                         </div>
@@ -529,16 +444,14 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 <?php endif; ?>
             </div>
         </div>
-
-    </div><!-- /col destra -->
-</div><!-- /profilo-grid -->
+    </div>
+</div>
 
 <?php formFieldScripts(); ?>
 
 <script>
-// ── Tab switching ─────────────────────────────────────────────────
 (function () {
-    const tabs   = document.querySelectorAll('.profilo-tab');
+    const tabs = document.querySelectorAll('.profilo-tab');
     const panels = document.querySelectorAll('.profilo-panel');
     tabs.forEach(function (tab) {
         tab.addEventListener('click', function () {
@@ -551,46 +464,42 @@ require_once __DIR__ . '/../includes/form_helpers.php';
         });
     });
 })();
-
-// ── Strength meter password ───────────────────────────────────────
 (function () {
-    const pwd   = document.getElementById('new_password');
-    const bar   = document.getElementById('pwdBar');
+    const pwd = document.getElementById('new_password');
+    const bar = document.getElementById('pwdBar');
     const label = document.getElementById('pwdLabel');
-    const wrap  = document.getElementById('pwdStrength');
+    const wrap = document.getElementById('pwdStrength');
     if (!pwd || !bar || !label || !wrap) return;
     pwd.addEventListener('input', function () {
         const v = pwd.value;
         if (!v) { wrap.style.display = 'none'; return; }
         wrap.style.display = 'block';
         let score = 0;
-        if (v.length >= 6)  score++;
+        if (v.length >= 6) score++;
         if (v.length >= 10) score++;
         if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
         if (/[0-9]/.test(v)) score++;
         if (/[^A-Za-z0-9]/.test(v)) score++;
         const levels = [
             { pct:'20%', color:'#dc2626', text:'Molto debole' },
-            { pct:'40%', color:'#d97706', text:'Debole'       },
-            { pct:'60%', color:'#ca8a04', text:'Media'        },
-            { pct:'80%', color:'#16a34a', text:'Forte'        },
-            { pct:'100%',color:'#15803d', text:'Molto forte'  },
+            { pct:'40%', color:'#d97706', text:'Debole' },
+            { pct:'60%', color:'#ca8a04', text:'Media' },
+            { pct:'80%', color:'#16a34a', text:'Forte' },
+            { pct:'100%', color:'#15803d', text:'Molto forte' },
         ];
         const l = levels[Math.min(score - 1, 4)] || levels[0];
-        bar.style.width      = l.pct;
+        bar.style.width = l.pct;
         bar.style.background = l.color;
-        label.textContent    = l.text;
-        label.style.color    = l.color;
+        label.textContent = l.text;
+        label.style.color = l.color;
     });
 })();
-
-// ── Validazione form password ─────────────────────────────────────
 (function () {
     const form = document.getElementById('formPwd');
     if (!form) return;
     form.addEventListener('submit', function (e) {
-        const np   = document.getElementById('new_password');
-        const cp   = document.getElementById('confirm_password');
+        const np = document.getElementById('new_password');
+        const cp = document.getElementById('confirm_password');
         const errEl = document.getElementById('err_confirm_password');
         if (!np || !cp || !errEl) return;
         if (np.value !== cp.value) {
