@@ -9,6 +9,13 @@ $conn = getConnection();
 $L    = lang();
 $uid  = (int)getCurrentUserId();
 
+// ── Helper: verifica se una tabella esiste ───────────────────────
+function tableExists(mysqli $conn, string $table): bool {
+    $t = mysqli_real_escape_string($conn, $table);
+    $r = mysqli_query($conn, "SHOW TABLES LIKE '$t'");
+    return $r && mysqli_num_rows($r) > 0;
+}
+
 // ── Ricarica utente fresco dal DB ────────────────────────────────
 function reloadUser(mysqli $conn, int $uid): array {
     $r = mysqli_query($conn, "SELECT * FROM utenti WHERE id = $uid LIMIT 1");
@@ -36,7 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $c_e  = mysqli_real_escape_string($conn, $cognome);
             $t_SQL = $telefono ? "'" . mysqli_real_escape_string($conn, $telefono) . "'" : 'NULL';
             mysqli_query($conn, "UPDATE utenti SET nome='$n_e', cognome='$c_e', telefono=$t_SQL WHERE id=$uid");
-            // Aggiorna sessione
             $_SESSION['user_nome']     = $nome;
             $_SESSION['user_cognome']  = $cognome;
             $_SESSION['nome_completo'] = $nome . ' ' . $cognome;
@@ -49,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ── Cambia email ──────────────────────────────────────────────
     if ($action === 'update_email') {
-        $newEmail  = strtolower(trim($_POST['email']    ?? ''));
+        $newEmail  = strtolower(trim($_POST['email']         ?? ''));
         $confEmail = strtolower(trim($_POST['email_confirm'] ?? ''));
         $pwdCheck  = $_POST['password_check'] ?? '';
         $errors    = [];
@@ -58,14 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($newEmail !== $confEmail)  $errors[] = 'Le due email non coincidono.';
         if (!$pwdCheck)                $errors[] = 'Inserisci la password attuale per confermare.';
 
-        if (empty($errors)) {
-            // Verifica password
-            if (!password_verify($pwdCheck, $user['password'])) {
-                $errors[] = 'Password attuale errata.';
-            }
+        if (empty($errors) && !password_verify($pwdCheck, $user['password'])) {
+            $errors[] = 'Password attuale errata.';
         }
         if (empty($errors)) {
-            // Verifica unicità email
             $e_safe = mysqli_real_escape_string($conn, $newEmail);
             $dup = mysqli_query($conn, "SELECT id FROM utenti WHERE email = '$e_safe' AND id != $uid LIMIT 1");
             if (mysqli_num_rows($dup) > 0) $errors[] = 'Email già in uso da un altro account.';
@@ -84,14 +86,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ── Cambia password ───────────────────────────────────────────
     if ($action === 'update_password') {
-        $oldPwd  = $_POST['old_password']   ?? '';
-        $newPwd  = $_POST['new_password']   ?? '';
+        $oldPwd  = $_POST['old_password']    ?? '';
+        $newPwd  = $_POST['new_password']    ?? '';
         $confPwd = $_POST['confirm_password'] ?? '';
         $errors  = [];
 
-        if (!$oldPwd)                  $errors[] = 'Inserisci la password attuale.';
-        if (strlen($newPwd) < 6)       $errors[] = 'La nuova password deve avere almeno 6 caratteri.';
-        if ($newPwd !== $confPwd)       $errors[] = 'Le due password non coincidono.';
+        if (!$oldPwd)            $errors[] = 'Inserisci la password attuale.';
+        if (strlen($newPwd) < 6) $errors[] = 'La nuova password deve avere almeno 6 caratteri.';
+        if ($newPwd !== $confPwd) $errors[] = 'Le due password non coincidono.';
 
         if (empty($errors) && !password_verify($oldPwd, $user['password'])) {
             $errors[] = 'La password attuale non è corretta.';
@@ -111,27 +113,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ── Dati per la pagina ────────────────────────────────────────────
-$user       = reloadUser($conn, $uid); // ricarica dopo eventuali UPDATE
-$activeTab  = $_GET['tab'] ?? 'info';
+$user      = reloadUser($conn, $uid);
+$activeTab = $_GET['tab'] ?? 'info';
 
-// Sessioni recenti dell'utente
+// Sessioni recenti — solo se la tabella esiste
 $sessioni = [];
-$rSess = mysqli_query($conn, "
-    SELECT s.id, s.data_inizio, s.data_fine, s.note,
-           l.nome AS lab_nome, l.aula AS lab_aula,
-           c.nome AS classe_nome
-    FROM sessioni s
-    LEFT JOIN laboratori l ON s.id_laboratorio = l.id
-    LEFT JOIN classi c ON s.id_classe = c.id
-    WHERE s.id_docente = $uid
-    ORDER BY s.data_inizio DESC
-    LIMIT 8
-");
-if ($rSess) while ($row = mysqli_fetch_assoc($rSess)) $sessioni[] = $row;
+$totSess  = 0;
+if (tableExists($conn, 'sessioni')) {
+    $rSess = mysqli_query($conn, "
+        SELECT s.id, s.data_inizio, s.data_fine, s.note,
+               l.nome AS lab_nome, l.aula AS lab_aula,
+               c.nome AS classe_nome
+        FROM sessioni s
+        LEFT JOIN laboratori l ON s.id_laboratorio = l.id
+        LEFT JOIN classi c ON s.id_classe = c.id
+        WHERE s.id_docente = $uid
+        ORDER BY s.data_inizio DESC
+        LIMIT 8
+    ");
+    if ($rSess) while ($row = mysqli_fetch_assoc($rSess)) $sessioni[] = $row;
 
-// Conta totali
-$totSess  = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM sessioni WHERE id_docente = $uid"))['n'] ?? 0;
-$totSegnR = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM segnalazioni WHERE id_docente = $uid"))['n'] ?? 0;
+    $rTot = mysqli_query($conn, "SELECT COUNT(*) AS n FROM sessioni WHERE id_docente = $uid");
+    $totSess = $rTot ? (int)(mysqli_fetch_assoc($rTot)['n'] ?? 0) : 0;
+}
+
+// Segnalazioni — solo se la tabella esiste
+$totSegnR = 0;
+if (tableExists($conn, 'segnalazioni')) {
+    $rSegn = mysqli_query($conn, "SELECT COUNT(*) AS n FROM segnalazioni WHERE id_docente = $uid");
+    $totSegnR = $rSegn ? (int)(mysqli_fetch_assoc($rSegn)['n'] ?? 0) : 0;
+}
 
 $pageTitle = 'Il mio profilo';
 require_once __DIR__ . '/../includes/header.php';
@@ -153,97 +164,109 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 
 /* Card profilo laterale */
 .profilo-card-user {
-    background: var(--card-bg, #fff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    background: var(--bg-white);
+    border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    box-shadow: var(--shadow);
 }
 .profilo-card-header {
-    background: linear-gradient(135deg, #01696f 0%, #0c4e54 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, #1e3a5f 100%);
     padding: 2rem 1.5rem 1.25rem;
     text-align: center;
-    position: relative;
 }
 .profilo-avatar-big {
     width: 72px; height: 72px;
     border-radius: 50%;
-    background: rgba(255,255,255,.25);
+    background: rgba(255,255,255,.22);
     color: #fff;
     font-size: 1.75rem;
     font-weight: 700;
     display: flex; align-items: center; justify-content: center;
     margin: 0 auto 1rem;
-    border: 3px solid rgba(255,255,255,.4);
+    border: 3px solid rgba(255,255,255,.35);
     letter-spacing: .5px;
 }
-.profilo-card-name { color:#fff; font-weight:700; font-size:1.1rem; margin-bottom:.2rem; }
-.profilo-card-role {
-    display:inline-block;
-    background: rgba(255,255,255,.18);
+.profilo-card-name  { color: #f1f5f9; font-weight: 700; font-size: 1.05rem; margin-bottom: .2rem; }
+.profilo-card-role  {
+    display: inline-block;
+    background: rgba(255,255,255,.15);
     color: rgba(255,255,255,.9);
-    font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.8px;
-    padding: 2px 10px; border-radius: 20px; margin-top:.25rem;
+    font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .8px;
+    padding: 2px 10px; border-radius: 20px; margin-top: .25rem;
 }
-.profilo-card-email { color:rgba(255,255,255,.75); font-size:.8rem; margin-top:.5rem; word-break:break-all; }
+.profilo-card-email { color: rgba(255,255,255,.7); font-size: .8rem; margin-top: .5rem; word-break: break-all; }
 
 .profilo-stats {
     display: grid; grid-template-columns: 1fr 1fr;
-    border-top: 1px solid var(--border-color, #e5e7eb);
+    border-top: 1px solid var(--border);
+    background: var(--bg-white);
 }
 .profilo-stat {
     text-align: center; padding: .9rem .5rem;
-    border-right: 1px solid var(--border-color, #e5e7eb);
+    border-right: 1px solid var(--border);
 }
 .profilo-stat:last-child { border-right: none; }
-.profilo-stat-num { font-size: 1.5rem; font-weight: 700; color: #01696f; line-height:1; }
-.profilo-stat-label { font-size: .72rem; color: var(--text-muted, #888); margin-top: 3px; text-transform:uppercase; letter-spacing:.5px; }
+.profilo-stat-num   { font-size: 1.5rem; font-weight: 700; color: var(--accent); line-height: 1; }
+.profilo-stat-label { font-size: .72rem; color: var(--text-light); margin-top: 3px; text-transform: uppercase; letter-spacing: .5px; }
 
-.profilo-card-body { padding: 1rem 1.25rem; }
-.profilo-info-row { display:flex; align-items:flex-start; gap:.6rem; padding:.55rem 0; border-bottom:1px solid var(--border-color,#f0f0f0); font-size:.875rem; }
-.profilo-info-row:last-child { border-bottom:none; }
-.profilo-info-label { color:var(--text-muted,#888); min-width:80px; font-size:.78rem; text-transform:uppercase; letter-spacing:.4px; padding-top:1px; }
-.profilo-info-value { font-weight:500; flex:1; word-break:break-all; }
+.profilo-card-body  { padding: 1rem 1.25rem; background: var(--bg-white); }
+.profilo-info-row   {
+    display: flex; align-items: flex-start; gap: .6rem;
+    padding: .55rem 0; border-bottom: 1px solid var(--border);
+    font-size: .875rem; color: var(--text);
+}
+.profilo-info-row:last-child { border-bottom: none; }
+.profilo-info-label { color: var(--text-light); min-width: 82px; font-size: .78rem; text-transform: uppercase; letter-spacing: .4px; padding-top: 1px; flex-shrink: 0; }
+.profilo-info-value { font-weight: 500; flex: 1; word-break: break-all; color: var(--text); }
 
 /* Tab nav */
 .profilo-tabs {
     display: flex; gap: .25rem;
     margin-bottom: 1.25rem;
-    border-bottom: 2px solid var(--border-color, #e5e7eb);
-    padding-bottom: 0;
+    border-bottom: 2px solid var(--border);
 }
 .profilo-tab {
     padding: .55rem 1.1rem;
     font-size: .875rem; font-weight: 600;
-    color: var(--text-muted, #888);
+    color: var(--text-light);
     background: none; border: none; cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -2px;
     transition: color .15s, border-color .15s;
     border-radius: 6px 6px 0 0;
-    display:flex; align-items:center; gap:.4rem;
+    display: flex; align-items: center; gap: .4rem;
+    white-space: nowrap;
 }
-.profilo-tab:hover { color: #01696f; }
-.profilo-tab.active { color: #01696f; border-bottom-color: #01696f; background: rgba(1,105,111,.05); }
+.profilo-tab:hover { color: var(--accent); }
+.profilo-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(59,130,246,.06); }
 
 /* Panel */
 .profilo-panel { display: none; }
 .profilo-panel.active { display: block; }
 
 /* Sessioni recenti */
-.sessioni-list { display:flex; flex-direction:column; gap:.5rem; }
+.sessioni-list { display: flex; flex-direction: column; gap: .5rem; }
 .sessione-row {
-    display:flex; align-items:center; gap:.75rem;
-    padding:.65rem .9rem;
-    background:var(--bg-light,#f9f9f9);
-    border:1px solid var(--border-color,#e5e7eb);
-    border-radius:8px; font-size:.85rem;
+    display: flex; align-items: center; gap: .75rem;
+    padding: .65rem .9rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px; font-size: .85rem;
 }
-.sessione-dot { width:8px;height:8px;border-radius:50%;background:#01696f;flex-shrink:0;margin-top:2px; }
-.sessione-info { flex:1; min-width:0; }
-.sessione-date { font-weight:600; color:var(--text-color,#222); }
-.sessione-meta { color:var(--text-muted,#888); font-size:.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.sessione-badge { font-size:.72rem; padding:2px 8px; border-radius:20px; background:#e8f4f4; color:#01696f; border:1px solid #c5e0e0; white-space:nowrap; }
+.sessione-dot   { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 2px; }
+.sessione-info  { flex: 1; min-width: 0; }
+.sessione-date  { font-weight: 600; color: var(--text); }
+.sessione-meta  { color: var(--text-light); font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sessione-badge { font-size: .72rem; padding: 2px 8px; border-radius: 20px; background: var(--primary-light); color: var(--accent); border: 1px solid #bfdbfe; white-space: nowrap; }
+
+/* Password toggle */
+.pwd-toggle-btn {
+    position: absolute; right: 32px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; font-size: 15px;
+    color: var(--text-light); padding: 4px; line-height: 1;
+}
+.pwd-toggle-btn:hover { color: var(--accent); }
 </style>
 
 <div class="profilo-grid">
@@ -262,11 +285,11 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 
             <div class="profilo-stats">
                 <div class="profilo-stat">
-                    <div class="profilo-stat-num"><?= (int)$totSess ?></div>
+                    <div class="profilo-stat-num"><?= $totSess ?></div>
                     <div class="profilo-stat-label">Sessioni</div>
                 </div>
                 <div class="profilo-stat">
-                    <div class="profilo-stat-num"><?= (int)$totSegnR ?></div>
+                    <div class="profilo-stat-num"><?= $totSegnR ?></div>
                     <div class="profilo-stat-label">Segnalazioni</div>
                 </div>
             </div>
@@ -286,7 +309,9 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                 </div>
                 <div class="profilo-info-row">
                     <span class="profilo-info-label">Telefono</span>
-                    <span class="profilo-info-value"><?= $user['telefono'] ? htmlspecialchars($user['telefono']) : '<em style="color:var(--text-muted,#aaa)">—</em>' ?></span>
+                    <span class="profilo-info-value">
+                        <?= $user['telefono'] ? htmlspecialchars($user['telefono']) : '<em style="color:var(--text-light)">—</em>' ?>
+                    </span>
                 </div>
                 <div class="profilo-info-row">
                     <span class="profilo-info-label">Ruolo</span>
@@ -305,11 +330,11 @@ require_once __DIR__ . '/../includes/form_helpers.php';
     <!-- ── Pannelli destra ───────────────────────────────────── -->
     <div>
         <div class="profilo-tabs" role="tablist">
-            <button class="profilo-tab <?= $activeTab === 'info' ? 'active' : '' ?>" data-tab="info" role="tab" aria-selected="<?= $activeTab === 'info' ? 'true' : 'false' ?>">
+            <button class="profilo-tab <?= $activeTab === 'info'     ? 'active' : '' ?>" data-tab="info"     role="tab" aria-selected="<?= $activeTab === 'info'     ? 'true' : 'false' ?>">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Informazioni
             </button>
-            <button class="profilo-tab <?= $activeTab === 'email' ? 'active' : '' ?>" data-tab="email" role="tab" aria-selected="<?= $activeTab === 'email' ? 'true' : 'false' ?>">
+            <button class="profilo-tab <?= $activeTab === 'email'    ? 'active' : '' ?>" data-tab="email"    role="tab" aria-selected="<?= $activeTab === 'email'    ? 'true' : 'false' ?>">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                 Cambia Email
             </button>
@@ -352,8 +377,8 @@ require_once __DIR__ . '/../includes/form_helpers.php';
                         'hint'        => 'Opzionale',
                     ]);
                     ?>
-                    <p style="font-size:.8rem;color:var(--text-muted,#888);margin-bottom:1rem;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:3px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <p style="font-size:.8rem;color:var(--text-light);margin-bottom:1rem;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:3px" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                         Per cambiare email o password usa le tab dedicate.
                     </p>
                     <button type="submit" class="btn btn-success">Salva modifiche</button>
@@ -365,8 +390,8 @@ require_once __DIR__ . '/../includes/form_helpers.php';
         <div class="profilo-panel card <?= $activeTab === 'email' ? 'active' : '' ?>" id="panel-email" role="tabpanel">
             <div class="card-header"><h3>Cambia indirizzo email</h3></div>
             <div class="card-body">
-                <p style="font-size:.875rem;color:var(--text-muted,#777);margin-bottom:1.25rem;">
-                    Email attuale: <strong><?= htmlspecialchars($user['email']) ?></strong>
+                <p style="font-size:.875rem;color:var(--text-light);margin-bottom:1.25rem;">
+                    Email attuale: <strong style="color:var(--text)"><?= htmlspecialchars($user['email']) ?></strong>
                 </p>
                 <form method="POST" novalidate>
                     <input type="hidden" name="action" value="update_email">
@@ -457,13 +482,18 @@ require_once __DIR__ . '/../includes/form_helpers.php';
         <!-- Tab: Sessioni recenti -->
         <div class="profilo-panel card <?= $activeTab === 'sessioni' ? 'active' : '' ?>" id="panel-sessioni" role="tabpanel">
             <div class="card-header">
-                <h3>Sessioni recenti <small style="font-weight:400;font-size:.8rem;color:var(--text-muted,#888)">(ultime 8 di <?= (int)$totSess ?>)</small></h3>
+                <h3>Sessioni recenti
+                    <?php if ($totSess > 0): ?>
+                    <small style="font-weight:400;font-size:.8rem;color:var(--text-light)">(ultime 8 di <?= $totSess ?>)</small>
+                    <?php endif; ?>
+                </h3>
             </div>
             <div class="card-body">
                 <?php if (empty($sessioni)): ?>
                     <div class="empty-state">
-                        <h4 style="color:var(--text-muted,#888)">Nessuna sessione registrata</h4>
-                        <p style="color:var(--text-muted,#aaa);font-size:.875rem">Le sessioni che crei compariranno qui.</p>
+                        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <h4>Nessuna sessione registrata</h4>
+                        <p style="font-size:.875rem">Le sessioni che crei compariranno qui.</p>
                     </div>
                 <?php else: ?>
                     <div class="sessioni-list">
@@ -496,15 +526,6 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 
 <?php formFieldScripts(); ?>
 
-<style>
-.pwd-toggle-btn {
-    position:absolute; right:32px; top:50%; transform:translateY(-50%);
-    background:none; border:none; cursor:pointer; font-size:15px;
-    color:var(--text-light,#888); padding:4px; line-height:1;
-}
-.pwd-toggle-btn:hover { color:var(--primary,#01696f); }
-</style>
-
 <script>
 // ── Tab switching ─────────────────────────────────────────────────
 (function () {
@@ -524,10 +545,10 @@ require_once __DIR__ . '/../includes/form_helpers.php';
 
 // ── Strength meter password ───────────────────────────────────────
 (function () {
-    const pwd    = document.getElementById('new_password');
-    const bar    = document.getElementById('pwdBar');
-    const label  = document.getElementById('pwdLabel');
-    const wrap   = document.getElementById('pwdStrength');
+    const pwd   = document.getElementById('new_password');
+    const bar   = document.getElementById('pwdBar');
+    const label = document.getElementById('pwdLabel');
+    const wrap  = document.getElementById('pwdStrength');
     if (!pwd || !bar || !label || !wrap) return;
     pwd.addEventListener('input', function () {
         const v = pwd.value;
@@ -540,17 +561,17 @@ require_once __DIR__ . '/../includes/form_helpers.php';
         if (/[0-9]/.test(v)) score++;
         if (/[^A-Za-z0-9]/.test(v)) score++;
         const levels = [
-            { pct:'20%', color:'#e74c3c', text:'Molto debole' },
-            { pct:'40%', color:'#e67e22', text:'Debole'       },
-            { pct:'60%', color:'#f1c40f', text:'Media'        },
-            { pct:'80%', color:'#2ecc71', text:'Forte'        },
-            { pct:'100%',color:'#27ae60', text:'Molto forte'  },
+            { pct:'20%', color:'#dc2626', text:'Molto debole' },
+            { pct:'40%', color:'#d97706', text:'Debole'       },
+            { pct:'60%', color:'#ca8a04', text:'Media'        },
+            { pct:'80%', color:'#16a34a', text:'Forte'        },
+            { pct:'100%',color:'#15803d', text:'Molto forte'  },
         ];
         const l = levels[Math.min(score - 1, 4)] || levels[0];
-        bar.style.width = l.pct;
+        bar.style.width      = l.pct;
         bar.style.background = l.color;
-        label.textContent = l.text;
-        label.style.color = l.color;
+        label.textContent    = l.text;
+        label.style.color    = l.color;
     });
 })();
 
@@ -559,8 +580,8 @@ require_once __DIR__ . '/../includes/form_helpers.php';
     const form = document.getElementById('formPwd');
     if (!form) return;
     form.addEventListener('submit', function (e) {
-        const np = document.getElementById('new_password');
-        const cp = document.getElementById('confirm_password');
+        const np   = document.getElementById('new_password');
+        const cp   = document.getElementById('confirm_password');
         const errEl = document.getElementById('err_confirm_password');
         if (!np || !cp || !errEl) return;
         if (np.value !== cp.value) {
