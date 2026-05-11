@@ -1,9 +1,13 @@
 <?php
 require_once __DIR__ . '/config/auth.php';
 
-// Se già loggato, vai alla dashboard
+// Se già loggato ma deve cambiare password, manda subito a cambia_password
 if (isLoggedIn()) {
-    header('Location: ' . BASE_PATH . '/index.php');
+    if (mustChangePassword()) {
+        header('Location: ' . BASE_PATH . '/pages/cambia_password.php');
+    } else {
+        header('Location: ' . BASE_PATH . '/index.php');
+    }
     exit;
 }
 
@@ -16,6 +20,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = 'Inserisci email e password.';
     } elseif (login($email, $password)) {
+
+        // --- Priorità 1: primo accesso → cambio password obbligatorio ---
+        if (mustChangePassword()) {
+            header('Location: ' . BASE_PATH . '/pages/cambia_password.php');
+            exit;
+        }
+
+        // --- Priorità 2: routing normale per ruolo ---
         $ruolo  = $_SESSION['user_ruolo'];
         $userId = (int)$_SESSION['user_id'];
 
@@ -24,10 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (count($labs) === 0) {
                 /*
-                 * Nessun lab assegnato.
-                 * NON usare logout() perché fa header(Location) + exit
-                 * prima che $error venga mostrato.
-                 * Svuotiamo la sessione manualmente e mostriamo il messaggio.
+                 * Nessun lab assegnato: svuotiamo la sessione manualmente
+                 * così $error viene mostrato senza fare un redirect.
                  */
                 session_unset();
                 $error = "Il tuo account non ha laboratori assegnati. Contatta l'amministratore.";

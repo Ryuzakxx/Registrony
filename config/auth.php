@@ -6,18 +6,29 @@ require_once __DIR__ . '/database.php';
 
 /**
  * Verifica le credenziali e avvia la sessione.
+ * Sicuro anche se la colonna must_change_password non esiste ancora nel DB.
  * Supporta sia password in chiaro (legacy) sia password_hash (bcrypt).
  * Se la password è legacy, la migra automaticamente a bcrypt.
  */
 function login(string $email, string $password): bool {
     $conn  = getConnection();
-    $email = mysqli_real_escape_string($conn, $email);
+    $emailSafe = mysqli_real_escape_string($conn, $email);
+
+    // Controlla se la colonna must_change_password esiste
+    $hasMCP = _columnExists($conn, 'utenti', 'must_change_password');
+
+    $fields = $hasMCP
+        ? 'id, nome, cognome, email, password, ruolo, attivo, must_change_password'
+        : 'id, nome, cognome, email, password, ruolo, attivo';
+
     $result = mysqli_query($conn, "
-        SELECT id, nome, cognome, email, password, ruolo, attivo, must_change_password
+        SELECT $fields
         FROM utenti
-        WHERE email = '$email'
+        WHERE email = '$emailSafe'
         LIMIT 1
     ");
+
+    if (!$result) return false;
     $user = mysqli_fetch_assoc($result);
     if (!$user || !$user['attivo']) return false;
 
@@ -29,20 +40,20 @@ function login(string $email, string $password): bool {
     } elseif ($password === $user['password']) {
         // Password legacy in chiaro: valida ma la migriamo subito a bcrypt
         $valid = true;
-        $hash  = password_hash($password, PASSWORD_BCRYPT);
-        $hash  = mysqli_real_escape_string($conn, $hash);
+        $hash  = mysqli_real_escape_string($conn, password_hash($password, PASSWORD_BCRYPT));
         mysqli_query($conn, "UPDATE utenti SET password = '$hash' WHERE id = {$user['id']}");
     }
 
     if (!$valid) return false;
 
-    $_SESSION['user_id']                  = $user['id'];
-    $_SESSION['user_nome']                = $user['nome'];
-    $_SESSION['user_cognome']             = $user['cognome'];
-    $_SESSION['user_email']               = $user['email'];
-    $_SESSION['user_ruolo']               = $user['ruolo'];
-    $_SESSION['user_nome_completo']       = $user['cognome'] . ' ' . $user['nome'];
-    $_SESSION['must_change_password']     = (bool)($user['must_change_password'] ?? false);
+    $_SESSION['user_id']              = $user['id'];
+    $_SESSION['user_nome']            = $user['nome'];
+    $_SESSION['user_cognome']         = $user['cognome'];
+    $_SESSION['user_email']           = $user['email'];
+    $_SESSION['user_ruolo']           = $user['ruolo'];
+    $_SESSION['user_nome_completo']   = $user['cognome'] . ' ' . $user['nome'];
+    // Se la colonna non esiste in DB il flag è 0 → nessun blocco
+    $_SESSION['must_change_password'] = $hasMCP ? (bool)($user['must_change_password'] ?? false) : false;
     unset($_SESSION['selected_lab_id']);
     return true;
 }
@@ -72,6 +83,17 @@ function isDocente(): bool {
 
 function mustChangePassword(): bool {
     return !empty($_SESSION['must_change_password']);
+}
+
+/**
+ * Helper: verifica se una colonna esiste in una tabella.
+ * Usata per rendere sicura la query anche prima della migrazione DB.
+ */
+function _columnExists(mysqli $conn, string $table, string $column): bool {
+    $t = mysqli_real_escape_string($conn, $table);
+    $c = mysqli_real_escape_string($conn, $column);
+    $res = mysqli_query($conn, "SHOW COLUMNS FROM `$t` LIKE '$c'");
+    return $res && mysqli_num_rows($res) > 0;
 }
 
 function getTechnicianLabs(int $userId): array {
@@ -188,26 +210,24 @@ function canManageAnyLab(): bool {
     return false;
 }
 
-function hasUserColumn(mysqli $conn, string $column): bool {
-    $col = mysqli_real_escape_string($conn, $column);
-    $res = mysqli_query($conn, "SHOW COLUMNS FROM utenti LIKE '$col'");
-    return $res && mysqli_num_rows($res) > 0;
-}
-
 /**
  * Richiede che l'utente sia loggato.
  * Se deve cambiare password (primo accesso), lo reindirizza alla pagina dedicata.
+ * Anti-loop: usa SCRIPT_FILENAME per confronto affidabile sul path reale.
  */
 function requireLogin(): void {
     if (!isLoggedIn()) {
         header('Location: ' . BASE_PATH . '/login.php');
         exit;
     }
-    // Forza cambio password al primo accesso (escludi la pagina stessa)
-    $currentFile = basename($_SERVER['PHP_SELF']);
-    if (mustChangePassword() && $currentFile !== 'cambia_password.php') {
-        header('Location: ' . BASE_PATH . '/pages/cambia_password.php');
-        exit;
+    // Blocca solo se la pagina corrente NON è cambia_password.php
+    if (mustChangePassword()) {
+        $realSelf    = realpath($_SERVER['SCRIPT_FILENAME'] ?? '');
+        $realTarget  = realpath(__DIR__ . '/../pages/cambia_password.php');
+        if ($realSelf !== $realTarget) {
+            header('Location: ' . BASE_PATH . '/pages/cambia_password.php');
+            exit;
+        }
     }
 }
 
@@ -228,7 +248,7 @@ function requireTecnicoOrAdmin(): void {
 }
 
 function requireLabSelected(): void {
-    requireLogin();
+    requireLogin(); // già include il check must_change_password
     if (isDocente() && !getSelectedLabId()) {
         header('Location: ' . BASE_PATH . '/pages/seleziona_laboratorio.php');
         exit;

@@ -1,6 +1,17 @@
 <?php
+/**
+ * Pagina cambio password obbligatorio al primo accesso.
+ * IMPORTANTE: questo file è ESCLUSO dal redirect in requireLogin()
+ * tramite confronto con realpath(), quindi non genera loop.
+ */
 require_once __DIR__ . '/../config/auth.php';
-requireLogin(); // non entrerà in loop perché cambia_password.php è escluso dal check
+requireLogin();
+
+// Se l'utente non ha bisogno di cambiare password, mandalo alla dashboard
+if (!mustChangePassword()) {
+    header('Location: ' . BASE_PATH . '/index.php');
+    exit;
+}
 
 $error   = '';
 $success = '';
@@ -8,7 +19,7 @@ $userId  = (int)getCurrentUserId();
 $conn    = getConnection();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nuova   = $_POST['nuova_password']     ?? '';
+    $nuova    = $_POST['nuova_password']    ?? '';
     $conferma = $_POST['conferma_password'] ?? '';
 
     if (strlen($nuova) < 8) {
@@ -25,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "UPDATE utenti SET password = '$hash', must_change_password = 0 WHERE id = $userId"
         );
         if ($ok) {
+            // Aggiorna subito la sessione così requireLogin() non blocca più
             $_SESSION['must_change_password'] = false;
             $success = 'Password aggiornata con successo! Verrai reindirizzato...';
         } else {
@@ -46,12 +58,12 @@ $pageTitle = 'Imposta la tua password';
     <link rel="stylesheet" href="<?= BASE_PATH ?>/assets/css/style.css">
     <link rel="stylesheet" href="<?= BASE_PATH ?>/assets/css/responsive.css">
     <style>
+        body { background: linear-gradient(135deg, #0f1e30 0%, #1e3a5f 60%, #2563eb 100%); }
         .change-pw-page {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #0f1e30 0%, #1e3a5f 60%, #2563eb 100%);
             padding: 20px;
         }
         .change-pw-card {
@@ -70,42 +82,26 @@ $pageTitle = 'Imposta la tua password';
             margin: 0 auto 20px;
         }
         .change-pw-card h2 {
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: #1e3a5f;
-            text-align: center;
-            margin-bottom: 6px;
+            font-size: 1.35rem; font-weight: 700;
+            color: #1e3a5f; text-align: center; margin-bottom: 6px;
         }
         .change-pw-card .subtitle {
-            font-size: .85rem;
-            color: #64748b;
-            text-align: center;
-            margin-bottom: 28px;
-            line-height: 1.5;
+            font-size: .85rem; color: #64748b;
+            text-align: center; margin-bottom: 28px; line-height: 1.5;
         }
         .pw-req {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 18px;
-            font-size: .8rem;
-            color: #475569;
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: 8px; padding: 10px 14px;
+            margin-bottom: 18px; font-size: .8rem; color: #475569;
         }
         .pw-req ul { margin: 4px 0 0 16px; }
         .pw-req li { margin-bottom: 2px; }
         .pw-strength {
-            height: 4px;
-            border-radius: 4px;
-            background: #e2e8f0;
-            margin-top: 6px;
-            transition: all .3s;
-            overflow: hidden;
+            height: 4px; border-radius: 4px; background: #e2e8f0;
+            margin-top: 6px; overflow: hidden;
         }
         .pw-strength-bar {
-            height: 100%;
-            border-radius: 4px;
-            width: 0;
+            height: 100%; border-radius: 4px; width: 0;
             transition: width .3s, background .3s;
         }
     </style>
@@ -122,7 +118,8 @@ $pageTitle = 'Imposta la tua password';
         </div>
         <h2>Imposta la tua password</h2>
         <p class="subtitle">
-            Benvenuto/a! Prima di continuare devi creare una password personale sicura.
+            Benvenuto/a <strong><?= htmlspecialchars($_SESSION['user_nome'] ?? '') ?></strong>!<br>
+            Prima di continuare crea una password personale sicura.
         </p>
 
         <?php if ($error): ?>
@@ -132,7 +129,7 @@ $pageTitle = 'Imposta la tua password';
         <?php endif; ?>
 
         <?php if ($success): ?>
-            <div class="alert alert-success" id="successMsg">
+            <div class="alert alert-success">
                 <?= htmlspecialchars($success) ?>
             </div>
             <script>
@@ -151,7 +148,7 @@ $pageTitle = 'Imposta la tua password';
             </ul>
         </div>
 
-        <form method="POST" action="" id="changePwForm">
+        <form method="POST" action="">
             <div class="form-group">
                 <label for="nuova_password">Nuova password</label>
                 <input type="password" id="nuova_password" name="nuova_password"
@@ -177,41 +174,39 @@ $pageTitle = 'Imposta la tua password';
 
 <script>
 (function () {
-    var inp    = document.getElementById('nuova_password');
-    var conf   = document.getElementById('conferma_password');
-    var bar    = document.getElementById('strengthBar');
-    var matchM = document.getElementById('matchMsg');
+    var inp   = document.getElementById('nuova_password');
+    var conf  = document.getElementById('conferma_password');
+    var bar   = document.getElementById('strengthBar');
+    var match = document.getElementById('matchMsg');
     if (!inp || !bar) return;
 
-    function calcStrength(pw) {
-        var score = 0;
-        if (pw.length >= 8)  score++;
-        if (pw.length >= 12) score++;
-        if (/[A-Z]/.test(pw)) score++;
-        if (/[0-9]/.test(pw)) score++;
-        if (/[^A-Za-z0-9]/.test(pw)) score++;
-        return score; // 0-5
+    function strength(pw) {
+        var s = 0;
+        if (pw.length >= 8)           s++;
+        if (pw.length >= 12)          s++;
+        if (/[A-Z]/.test(pw))         s++;
+        if (/[0-9]/.test(pw))         s++;
+        if (/[^A-Za-z0-9]/.test(pw))  s++;
+        return s;
     }
 
     inp.addEventListener('input', function () {
-        var s = calcStrength(inp.value);
-        var pct   = Math.min(100, s * 20) + '%';
-        var color = s <= 1 ? '#ef4444' : s <= 2 ? '#f59e0b' : s <= 3 ? '#3b82f6' : '#16a34a';
-        bar.style.width     = pct;
-        bar.style.background = color;
+        var s     = strength(inp.value);
+        bar.style.width      = Math.min(100, s * 20) + '%';
+        bar.style.background = s <= 1 ? '#ef4444' : s <= 2 ? '#f59e0b' : s <= 3 ? '#3b82f6' : '#16a34a';
         checkMatch();
     });
 
     conf.addEventListener('input', checkMatch);
 
     function checkMatch() {
-        if (!conf.value) { matchM.textContent = ''; return; }
+        if (!conf.value) { match.textContent = ''; return; }
         if (inp.value === conf.value) {
-            matchM.textContent = '✓ Le password coincidono';
-            matchM.style.color = '#16a34a';
+            match.textContent = '\u2713 Le password coincidono';
+            match.style.color = '#16a34a';
         } else {
-            matchM.textContent = '✗ Le password non coincidono';
-            matchM.style.color = '#ef4444';
+            match.textContent = '\u2717 Le password non coincidono';
+            match.style.color = '#ef4444';
         }
     }
 })();
